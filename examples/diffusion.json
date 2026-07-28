@@ -21,8 +21,6 @@
 			"type": "diffusion",
 			"params": {
 				"D": 0.01,
-				"vx": 0.0,
-				"vy": 0.0,
 				"f": 0.0
 			}
 		}
