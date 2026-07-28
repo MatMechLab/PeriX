@@ -1,0 +1,53 @@
+{
+	"Mesh": {
+		"type": "perix",
+		"dim": 2,
+		"xmax": 1.0,
+		"ymax": 1.0,
+		"nx": 1000,
+		"ny": 1000,
+		"meshtype": "quad4",
+		"savemesh": false
+	},
+	"PDMesh": {
+		"HorizonRadiusFactor": 3.0,
+		"Order": 2
+	},
+	"DOFs": [
+		"u"
+	],
+	"ElmtSystem": {
+		"poisson": {
+			"type": "poisson",
+			"params": {
+				"sigma": 1.0,
+				"f": 0.0
+			}
+		}
+	},
+	"BCSystem": {
+		"left": {
+			"type": "dirichlet",
+			"phygroup": "leftnodes_ghost",
+			"dofs": [
+				"u"
+			],
+			"value": 0.0
+		},
+		"right": {
+			"type": "dirichlet",
+			"phygroup": "rightnodes_ghost",
+			"dofs": [
+				"u"
+			],
+			"value": 1.0
+		}
+	},
+	"JobSystem": {
+		"type": "static",
+		"assemble": "openmp"
+	},
+	"LinearSolver": {
+		"type": "pardiso"
+	}
+}

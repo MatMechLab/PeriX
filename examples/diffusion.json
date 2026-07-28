@@ -1,0 +1,99 @@
+{
+	"Mesh": {
+		"type": "perix",
+		"dim": 2,
+		"xmax": 1.0,
+		"ymax": 1.0,
+		"nx": 500,
+		"ny": 500,
+		"meshtype": "quad4",
+		"savemesh": true
+	},
+	"PDMesh": {
+		"HorizonRadiusFactor": 3.0,
+		"Order": 2
+	},
+	"DOFs": [
+		"c"
+	],
+	"ElmtSystem": {
+		"diffusion": {
+			"type": "diffusion",
+			"params": {
+				"D": 0.01,
+				"vx": 0.0,
+				"vy": 0.0,
+				"f": 0.0
+			}
+		}
+	},
+	"BCSystem": {
+		"bottom": {
+			"type": "dirichlet",
+			"phygroup": "bottomnodes_ghost",
+			"dofs": [
+				"c"
+			],
+			"value": 1.0
+		},
+		"top": {
+			"type": "dirichlet",
+			"phygroup": "topnodes_ghost",
+			"dofs": [
+				"c"
+			],
+			"value": 0.0
+		},
+		"left": {
+			"type": "neumann",
+			"phygroup": "leftnodes_ghost",
+			"dofs": [
+				"c"
+			],
+			"value": 0.0
+		},
+		"right": {
+			"type": "neumann",
+			"phygroup": "rightnodes_ghost",
+			"dofs": [
+				"c"
+			],
+			"value": 0.0
+		}
+	},
+	"ICSystem": {
+		"bump": {
+			"type": "gaussian",
+			"dof": "c",
+			"center": [
+				0.5,
+				0.5
+			],
+			"sigma": [
+				0.1,
+				0.1
+			],
+			"amplitude": 1.0,
+			"offset": 0.2
+		}
+	},
+	"JobSystem": {
+		"type": "transient",
+		"assemble": "openmp"
+	},
+	"TimeStepping": {
+		"dt": 0.5,
+		"total_time": 50.0
+	},
+	"NonlinearSolver": {
+		"max_iters": 20,
+		"abs_tol": 1e-09,
+		"rel_tol": 1e-12
+	},
+	"LinearSolver": {
+		"type": "pardiso"
+	},
+	"OutputSystem": {
+		"interval": 10
+	}
+}

@@ -1,0 +1,97 @@
+{
+    "Mesh": {
+        "type": "gmsh",
+        "file": "impact2D.msh",
+        "savemesh": false
+    },
+    "PDMesh": {
+        "HorizonRadiusFactor": 3,
+        "Order": 2
+    },
+    "MeshModify": {
+        "type": "pre_existing_cracks",
+        "treatment": "force_only",
+        "Cracks": [
+            {
+                "x1": 0.075,
+                "y1": 0.05,
+                "x2": 0.075,
+                "y2": 0.1,
+                "label": "left_notch"
+            },
+            {
+                "x1": 0.125,
+                "y1": 0.05,
+                "x2": 0.125,
+                "y2": 0.1,
+                "label": "right_notch"
+            }
+        ]
+    },
+    "DOFs": [
+        "ux",
+        "uy"
+    ],
+    "ElmtSystem": {
+        "frac": {
+            "type": "explicit_pddo_frac",
+            "params": {
+                "E": 1.9e11,
+                "nu": 0.25,
+                "rho": 7800.0,
+                "Gc": 69000.0,
+                "state": "plane_stress",
+                "tension_only": true,
+                "damage": true
+            }
+        }
+    },
+    "BCSystem": {
+        "free": {
+            "type": "neumann",
+            "phygroup": "freenodes_ghost",
+            "dofs": [
+                "ux",
+                "uy"
+            ],
+            "value": [
+                0.0,
+                0.0
+            ]
+        },
+        "impactor": {
+            "type": "dirichlet",
+            "phygroup": "impactnodes_ghost",
+            "dofs": [
+                "ux",
+                "uy"
+            ],
+            "value": [
+                0.0,
+                0.0
+            ],
+            "velocity": [
+                0.0,
+                -22.0
+            ],
+            "direct": true
+        }
+    },
+    "JobSystem": {
+        "type": "transient",
+        "assemble": "cuda"
+    },
+    "TimeStepping": {
+        "dt": 1e-09,
+        "total_time": 0.0001,
+        "verbose": true
+    },
+    "OutputSystem": {
+        "interval": 10000,
+        "Fields": [
+            "damage",
+            "vonMises",
+            "stress"
+        ]
+    }
+}

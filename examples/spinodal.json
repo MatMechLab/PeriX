@@ -1,0 +1,126 @@
+{
+	"Mesh": {
+		"type": "perix",
+		"dim": 2,
+		"xmin": 0.0,
+		"xmax": 1.0,
+		"ymin": 0.0,
+		"ymax": 1.0,
+		"nx": 250,
+		"ny": 250,
+		"meshtype": "quad4",
+		"savemesh": true
+	},
+	"PDMesh": {
+		"HorizonRadiusFactor": 3,
+		"Order": 2
+	},
+	"DOFs": [
+		"c",
+		"mu"
+	],
+	"ElmtSystem": {
+		"cahnhilliard": {
+			"type": "cahnhilliard",
+			"params": {
+				"chi": 3.0,
+				"kappa": 0.001,
+				"M": 1.0
+			}
+		}
+	},
+	"BCSystem": {
+		"left": {
+			"type": "neumann",
+			"phygroup": "leftnodes_ghost",
+			"dofs": [
+				"c",
+				"mu"
+			],
+			"value": [
+				0.0,
+				0.0
+			]
+		},
+		"right": {
+			"type": "neumann",
+			"phygroup": "rightnodes_ghost",
+			"dofs": [
+				"c",
+				"mu"
+			],
+			"value": [
+				0.0,
+				0.0
+			]
+		},
+		"bottom": {
+			"type": "neumann",
+			"phygroup": "bottomnodes_ghost",
+			"dofs": [
+				"c",
+				"mu"
+			],
+			"value": [
+				0.0,
+				0.0
+			]
+		},
+		"top": {
+			"type": "neumann",
+			"phygroup": "topnodes_ghost",
+			"dofs": [
+				"c",
+				"mu"
+			],
+			"value": [
+				0.0,
+				0.0
+			]
+		}
+	},
+	"ICSystem": {
+		"noisy_half": {
+			"type": "random",
+			"dof": "c",
+			"min": 0.49,
+			"max": 0.51,
+			"seed": 12345
+		},
+		"mu_zero": {
+			"type": "constant",
+			"dof": "mu",
+			"value": 0.0
+		}
+	},
+	"JobSystem": {
+		"type": "transient",
+		"assemble": "openmp"
+	},
+	"TimeStepping": {
+		"dt": 0.001,
+		"total_time": 100.0,
+		"adaptive": true,
+		"optimal_iters": 10,
+		"growth_factor": 1.2,
+		"cutback_factor": 0.5,
+		"max_cutbacks": 6,
+		"min_dt": 1e-04,
+		"max_dt": 1
+	},
+	"NonlinearSolver": {
+		"max_iters": 20,
+		"abs_tol": 1e-09,
+		"rel_tol": 1e-08
+	},
+	"LinearSolver": {
+		"type": "pardiso"
+	},
+	"OutputSystem": {
+		"interval": 20,
+		"Fields": [
+			"fPrime",
+			"fDoublePrime"
+		]
+	}
+}

@@ -1,0 +1,129 @@
+{
+	"Mesh": {
+		"type": "perix",
+		"dim": 2,
+		"xmin": 0.0,
+		"xmax": 1,
+		"ymin": 0.0,
+		"ymax": 0.4,
+		"nx": 300,
+		"ny": 120,
+		"meshtype": "quad4",
+		"savemesh": false
+	},
+	"PDMesh": {
+		"HorizonRadiusFactor": 3,
+		"Order": 2
+	},
+	"MeshModify": {
+		"type": "pre_existing_cracks",
+		"treatment": "force_only",
+		"Cracks": [
+			{
+				"x1": 0.0,
+				"y1": 0.2,
+				"x2": 0.5,
+				"y2": 0.2
+			}
+		]
+	},
+	"DOFs": [
+		"ux",
+		"uy"
+	],
+	"ElmtSystem": {
+		"frac": {
+			"type": "pddo_dynamic_frac",
+			"params": {
+				"E": 79.1403,
+				"nu": 0.333,
+				"rho": 268.198,
+				"Gc": 1.48388e-06,
+				"state": "plane_stress",
+				"tension_only": true,
+				"damage": true
+			}
+		}
+	},
+	"BCSystem": {
+		"left_free": {
+			"type": "pdtraction",
+			"phygroup": "leftnodes",
+			"E": 79.1403,
+			"nu": 0.333,
+			"state": "plane_stress",
+			"value": [
+				0.0,
+				0.0
+			]
+		},
+		"right_free": {
+			"type": "pdtraction",
+			"phygroup": "rightnodes",
+			"E": 79.1403,
+			"nu": 0.333,
+			"state": "plane_stress",
+			"value": [
+				0.0,
+				0.0
+			]
+		},
+		"top_traction": {
+			"type": "pdtraction",
+			"phygroup": "topnodes",
+			"E": 79.1403,
+			"nu": 0.333,
+			"state": "plane_stress",
+			"value": [
+				0.0,
+				0.0153884
+			]
+		},
+		"bottom_traction": {
+			"type": "pdtraction",
+			"phygroup": "bottomnodes",
+			"E": 79.1403,
+			"nu": 0.333,
+			"state": "plane_stress",
+			"value": [
+				0.0,
+				-0.0153884
+			]
+		}
+	},
+	"JobSystem": {
+		"type": "transient",
+		"assemble": "openmp"
+	},
+	"TimeStepping": {
+		"dt": 1e-3,
+		"total_time": 5,
+		"adaptive": true,
+		"optimal_iters": 5,
+		"growth_factor": 1.2,
+		"cutback_factor": 0.5,
+		"max_cutbacks": 6,
+		"min_dt": 1e-4,
+		"max_dt": 1e-02
+	},
+	"NonlinearSolver": {
+		"max_iters": 20,
+		"abs_tol": 1e-9,
+		"rel_tol": 1e-9,
+		"verbose": true
+	},
+	"LinearSolver": {
+		"type": "pardiso",
+		"params": {
+			"msglvl": 0
+		}
+	},
+	"OutputSystem": {
+		"interval": 100,
+		"Fields": [
+			"damage",
+			"vonMises",
+			"stress"
+		]
+	}
+}
