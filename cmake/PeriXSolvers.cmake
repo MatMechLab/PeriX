@@ -26,7 +26,7 @@ function(perix_configure_solvers target)
 
         find_package(Threads REQUIRED)
         target_sources(${target} PRIVATE ${PERIX_PARDISO_SOURCE})
-        target_include_directories(${target} PRIVATE "${PERIX_MKL_INCLUDE_DIR}")
+        target_include_directories(${target} PUBLIC "${PERIX_MKL_INCLUDE_DIR}")
         target_compile_definitions(${target} PUBLIC PERIX_HAS_PARDISO)
         set(_perix_mkl_system_libraries Threads::Threads ${CMAKE_DL_LIBS})
         if(UNIX)
@@ -59,7 +59,10 @@ function(perix_configure_solvers target)
         endif()
 
         target_sources(${target} PRIVATE ${PERIX_CUDSS_SOURCE})
-        target_include_directories(${target} PRIVATE "${PERIX_CUDSS_INCLUDE_DIR}")
+        target_include_directories(${target} PUBLIC
+            "${PERIX_CUDSS_INCLUDE_DIR}"
+            "${CUDAToolkit_INCLUDE_DIRS}"
+        )
         target_compile_definitions(${target} PUBLIC PERIX_HAS_CUDSS)
         target_link_libraries(${target} PRIVATE
             "${PERIX_CUDSS_LIBRARY}"
