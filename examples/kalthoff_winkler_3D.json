@@ -1,0 +1,138 @@
+{
+    "Mesh": {
+        "type": "gmsh",
+        "file": "impact3D.msh",
+        "savemesh": false
+    },
+    "PDMesh": {
+        "HorizonRadiusFactor": 2.5,
+        "Order": 2
+    },
+    "MeshModify": {
+        "type": "pre_existing_cracks",
+        "treatment": "force_only",
+        "Presets": [
+            {
+                "type": "center_crack",
+                "label": "through_thickness_plane",
+                "center": [
+                    0.075,
+                    0.075,
+                    0.0045
+                ],
+                "normal": [
+                    1.0,
+                    0,
+                    0.0
+                ],
+                "length": 0.05,
+                "width": 0.009
+            },
+            {
+                "type": "center_crack",
+                "label": "through_thickness_plane",
+                "center": [
+                    0.125,
+                    0.075,
+                    0.0045
+                ],
+                "normal": [
+                    1.0,
+                    0,
+                    0.0
+                ],
+                "length": 0.05,
+                "width": 0.009
+            }
+        ]
+    },
+    "DOFs": [
+        "ux",
+        "uy",
+        "uz"
+    ],
+    "ElmtSystem": {
+        "frac": {
+            "type": "explicit_pddo_frac",
+            "params": {
+                "E": 190000000000.0,
+                "nu": 0.25,
+                "rho": 7800.0,
+                "Gc": 69000.0,
+                "tension_only": true,
+                "damage": true
+            }
+        }
+    },
+    "BCSystem": {
+        "free": {
+            "type": "neumann",
+            "phygroup": "freenodes_ghost",
+            "dofs": [
+                "ux",
+                "uy",
+                "uz"
+            ],
+            "value": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "box": {
+                "xmin": 0.075,
+                "xmax": 0.125,
+                "ymin": 0.0,
+                "ymax": 0.1,
+                "zmin": -0.1,
+                "zmax": 0.1
+            }
+        },
+        "impactor": {
+            "type": "dirichlet",
+            "phygroup": "impactnodes_ghost",
+            "dofs": [
+                "ux",
+                "uy",
+                "uz"
+            ],
+            "value": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "velocity": [
+                0.0,
+                -22.0,
+                0.0
+            ],
+            "direct": true
+        },
+        "fixed": {
+            "type": "dirichlet",
+            "phygroup": "alldomain",
+            "dofs": [
+                "uz"
+            ],
+            "value": [
+                0.0
+            ]
+        }
+    },
+    "JobSystem": {
+        "type": "transient",
+        "assemble": "openmp"
+    },
+    "TimeStepping": {
+        "dt": 5e-08,
+        "total_time": 0.0001,
+        "verbose": true
+    },
+    "OutputSystem": {
+        "interval": 100,
+        "Fields": [
+            "damage",
+            "vonMises",
+            "stress"
+        ]
+    }
+}
