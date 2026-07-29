@@ -141,6 +141,22 @@ int main(int argc,char *argv[]) {
         expectRejected("unknown solver type",changed);
     }
 
+    changed=documents.front();
+    changed["JobSystem"]["not_public_option"]=true;
+    expectRejected("unknown job option",changed);
+
+    changed=documents.front();
+    changed["JobSystem"]["type"]="not_public";
+    expectRejected("unknown job type",changed);
+
+    changed=documents.front();
+    changed["JobSystem"]["assemble"]="not_public";
+    expectRejected("unknown assembly backend",changed);
+
+    changed=documents.front();
+    changed.erase("TimeStepping");
+    expectRejected("transient job without time stepping",changed);
+
     if (Json *diffusion=findWith(documents,"ICSystem","bump")) {
         const std::vector<std::pair<std::string,Json>> profiles={
             {"constant",{{"type","constant"},{"dof","c"},{"value",0.2}}},
