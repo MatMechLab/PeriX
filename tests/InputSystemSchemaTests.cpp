@@ -133,6 +133,31 @@ int main(int argc,char *argv[]) {
         changed=*withOutput;
         changed["OutputSystem"]["not_public_option"]="all";
         expectRejected("unknown output option",changed);
+
+        changed=*withOutput;
+        changed["OutputSystem"]["interval"]=0;
+        expectRejected("nonpositive output interval",changed);
+
+        changed=*withOutput;
+        changed["OutputSystem"]["format"]="not_public";
+        expectRejected("unknown output format",changed);
+
+        changed=*withOutput;
+        changed["OutputSystem"]["Fields"]="damage";
+        expectRejected("nonarray output fields",changed);
+
+        changed=*withOutput;
+        changed["OutputSystem"]["Fields"]=Json::array({""});
+        expectRejected("empty output field",changed);
+
+        changed=*withOutput;
+        changed["OutputSystem"]["Fields"]=
+            Json::array({"damage","damage"});
+        expectRejected("duplicate output field",changed);
+    }
+    else {
+        std::printf("FAIL did not find output example\n");
+        ++failures;
     }
 
     if (Json *withSolver=findWith(documents,"LinearSolver","type")) {
