@@ -5,7 +5,7 @@
         "savemesh": false
     },
     "PDMesh": {
-        "HorizonRadiusFactor": 2.5,
+        "HorizonRadiusFactor": 3,
         "Order": 2
     },
     "MeshModify": {
