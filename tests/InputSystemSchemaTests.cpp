@@ -157,6 +157,47 @@ int main(int argc,char *argv[]) {
     changed.erase("TimeStepping");
     expectRejected("transient job without time stepping",changed);
 
+    if (Json *fracture=findWith(documents,"MeshModify","Cracks")) {
+        changed=*fracture;
+        changed["MeshModify"]["type"]="not_public";
+        expectRejected("unknown mesh modification",changed);
+
+        changed=*fracture;
+        changed["MeshModify"]["treatment"]="not_public";
+        expectRejected("unknown crack treatment",changed);
+
+        changed=*fracture;
+        changed["MeshModify"]["Cracks"][0]["not_public_option"]=true;
+        expectRejected("unknown crack option",changed);
+
+        changed=*fracture;
+        changed["MeshModify"]["Cracks"][0]["x2"]=
+            changed["MeshModify"]["Cracks"][0]["x1"];
+        changed["MeshModify"]["Cracks"][0]["y2"]=
+            changed["MeshModify"]["Cracks"][0]["y1"];
+        expectRejected("zero-length crack",changed);
+
+        changed=*fracture;
+        changed["MeshModify"]["Cracks"]=Json::array();
+        expectRejected("empty crack list",changed);
+    }
+    else {
+        std::printf("FAIL did not find pre-existing-crack example\n");
+        ++failures;
+    }
+
+    if (Json *diffusion=findWith(documents,"ICSystem","bump")) {
+        changed=*diffusion;
+        changed["MeshModify"]={
+            {"type","pre_existing_cracks"},
+            {"treatment","force_only"},
+            {"Cracks",Json::array({{
+                {"x1",0.2},{"y1",0.2},{"x2",0.8},{"y2",0.2}
+            }})}
+        };
+        expectRejected("crack on non-fracture element",changed);
+    }
+
     if (Json *diffusion=findWith(documents,"ICSystem","bump")) {
         const std::vector<std::pair<std::string,Json>> profiles={
             {"constant",{{"type","constant"},{"dof","c"},{"value",0.2}}},
