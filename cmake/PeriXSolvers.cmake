@@ -59,14 +59,11 @@ function(perix_configure_solvers target)
         endif()
 
         target_sources(${target} PRIVATE ${PERIX_CUDSS_SOURCE})
-        target_include_directories(${target} PUBLIC
-            "${PERIX_CUDSS_INCLUDE_DIR}"
-            "${CUDAToolkit_INCLUDE_DIRS}"
-        )
+        target_include_directories(${target} PUBLIC "${PERIX_CUDSS_INCLUDE_DIR}")
         target_compile_definitions(${target} PUBLIC PERIX_HAS_CUDSS)
-        target_link_libraries(${target} PRIVATE
-            "${PERIX_CUDSS_LIBRARY}"
-            CUDA::cudart
+        target_link_libraries(${target}
+            PUBLIC CUDA::cudart
+            PRIVATE "${PERIX_CUDSS_LIBRARY}"
         )
     endif()
 endfunction()
