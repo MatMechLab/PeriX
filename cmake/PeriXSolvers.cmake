@@ -67,6 +67,11 @@ function(perix_configure_solvers target)
         target_sources(${target} PRIVATE ${PERIX_CUDSS_SOURCE})
         target_include_directories(${target} PUBLIC "${PERIX_CUDSS_INCLUDE_DIR}")
         target_compile_definitions(${target} PUBLIC PERIX_HAS_CUDSS)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+            # Keep the CUDA math libraries as direct runtime dependencies so
+            # the executable's build RPATH also resolves cuDSS dependencies.
+            target_link_options(${target} PUBLIC "LINKER:--no-as-needed")
+        endif()
         target_link_libraries(${target}
             PUBLIC CUDA::cudart
             PRIVATE
