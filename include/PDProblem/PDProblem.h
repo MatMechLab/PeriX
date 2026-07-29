@@ -94,7 +94,7 @@ private:
     TimeStepping m_TimeStepping;
 
     SparseMatrix m_Matrix;
-    VectorXd m_RHS,m_dU,m_U,m_Uold;
+    VectorXd m_RHS,m_dU,m_U,m_Uold,m_InitialVelocity;
     Timer m_Timer;
 
     // (time, basename) entries for ParaView Collection (.pvd) files

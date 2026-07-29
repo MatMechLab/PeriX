@@ -59,8 +59,8 @@
                 0.0
             ]
         },
-        "impactor": {
-            "type": "dirichlet",
+        "impacted_segment_free": {
+            "type": "neumann",
             "phygroup": "impactnodes_ghost",
             "dofs": [
                 "ux",
@@ -69,12 +69,33 @@
             "value": [
                 0.0,
                 0.0
+            ]
+        }
+    },
+    "ICSystem": {
+        "impact_initial_velocity": {
+            "type": "box",
+            "field": "velocity",
+            "dofs": [
+                "ux",
+                "uy"
             ],
-            "velocity": [
+            "min_corner": [
+                0.075,
+                0.096969696969697
+            ],
+            "max_corner": [
+                0.125,
+                0.1
+            ],
+            "inside_values": [
                 0.0,
                 -22.0
             ],
-            "direct": true
+            "outside_values": [
+                0.0,
+                0.0
+            ]
         }
     },
     "JobSystem": {

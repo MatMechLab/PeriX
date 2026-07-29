@@ -197,6 +197,7 @@ public:
                                const int &DofsPerNode,
                                VectorXd &U,
                                VectorXd &Uold,
+                               const VectorXd &InitialVelocity,
                                VectorXd &Rate,
                                const std::function<void(const int&,const double&)> &SaveResults);
 

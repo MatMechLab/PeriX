@@ -130,6 +130,7 @@ void PDProblem::init(int args,char *argv[]) {
         m_U.resize(totalDofs);
         m_dU.resize(totalDofs);
         m_Uold.resize(totalDofs);
+        m_InitialVelocity.resize(totalDofs);
         m_Timer.endTimer();
         m_Timer.printElapseTime("Vectors are initialized",true);
         return;
@@ -142,6 +143,7 @@ void PDProblem::init(int args,char *argv[]) {
     m_U.resize(totalDofs);
     m_dU.resize(totalDofs);
     m_Uold.resize(totalDofs);
+    m_InitialVelocity.resize(totalDofs);
     m_Timer.endTimer();
     m_Timer.printElapseTime("Sparse matrix and vectors are initialized",false);
 

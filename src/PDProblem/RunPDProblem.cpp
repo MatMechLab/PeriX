@@ -29,12 +29,25 @@ void PDProblem::run(int args,char *argv[]) {
     const int ndof=m_ElmtSystem.getMaxDofsPerNode();
 
     m_U.setToZeros();
-    // 1) user-defined initial conditions (ICSystem) write per-DoF values.
-    m_ICSystem.applyInitialConditions(m_PDMesh,ndof,m_U);
+    m_InitialVelocity.setToZeros();
+    // 1) user-defined initial conditions write the solution and, separately,
+    //    the t=0 velocity used to initialize central-difference history.
+    m_ICSystem.applyInitialConditions(
+        m_PDMesh,ndof,m_U,m_InitialVelocity);
     // 2) BCs win at constrained boundaries (Dirichlet hard-pin, mirror
     //    Neumann ghosts copy adjusted bulk values).
     m_BCSystem.presetSolution(m_PDMesh,ndof,m_U);
     m_Uold=m_U;
+
+    if (m_ICSystem.hasVelocityIC()
+        && (!m_ElmtSystem.isExplicit()
+            || m_ElmtSystem.isQuasiStatic()
+            || m_ElmtSystem.getTimeOrder()<2)) {
+        MessagePrinter::printErrorTxt(
+            "velocity initial conditions require a second-order explicit "
+            "transient kernel (central difference)");
+        MessagePrinter::exitPeriX();
+    }
 
     allTimer.startTimer();
 
@@ -125,7 +138,8 @@ void PDProblem::run(int args,char *argv[]) {
         }
         else if (m_ElmtSystem.getTimeOrder()>=2) {
             ok=m_TimeStepping.solveExplicitDynamics(m_PDMesh,m_Operators,m_ElmtSystem,m_BCSystem,
-                                                    m_PDSystem,ndof,m_U,m_Uold,m_RHS,saveAll);
+                                                    m_PDSystem,ndof,m_U,m_Uold,
+                                                    m_InitialVelocity,m_RHS,saveAll);
         }
         else {
             ok=m_TimeStepping.solveExplicit(m_PDMesh,m_Operators,m_ElmtSystem,m_BCSystem,

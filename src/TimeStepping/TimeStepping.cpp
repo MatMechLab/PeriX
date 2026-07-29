@@ -422,6 +422,7 @@ bool TimeStepping::solveExplicitDynamics(const PDMesh &Mesh,
                                          const int &DofsPerNode,
                                          VectorXd &U,
                                          VectorXd &Uold,
+                                         const VectorXd &InitialVelocity,
                                          VectorXd &Rate,
                                          const std::function<void(const int&,const double&)> &SaveResults) {
     constexpr int bufSize=400;
@@ -452,17 +453,24 @@ bool TimeStepping::solveExplicitDynamics(const PDMesh &Mesh,
     Timer stepTimer;
 
     const int n=U.getSize();
+    if (InitialVelocity.getSize()!=n) {
+        return bail(
+            "TimeStepping::solveExplicitDynamics: initial velocity has size "
+            +std::to_string(InitialVelocity.getSize())
+            +", expected "+std::to_string(n));
+    }
     double *uptr =U.getDataPtr();
     double *uoptr=Uold.getDataPtr();
+    const double *v0ptr=InitialVelocity.getDataPtr();
 
-    // ---- consistent rest start + meaningful t=0 output ----
+    // ---- consistent start + meaningful t=0 output ----
     // One rate evaluation at the preset initial state, BEFORE the loop:
-    // (1) rest start: central difference needs u^{-1}=u^0-dt*v^0+(dt^2/2)a^0.
-    //     The caller seeds Uold=u^0 (v^0=0 -- there is no velocity-IC channel),
-    //     which silently drops the a^0 term: the first step then advances by
-    //     dt^2*a^0 instead of (dt^2/2)*a^0, injecting a persistent spurious
-    //     velocity (dt/2)|a^0| whenever the run does NOT start in equilibrium
-    //     (suddenly applied body force, pre-strained IC). Add the missing term.
+    // (1) central difference needs
+    //       u^{-1}=u^0-dt*v^0+(dt^2/2)*a^0.
+    //     v^0 comes from ICSystem and is a one-time initial state, not a
+    //     sustained velocity boundary condition. The acceleration term also
+    //     prevents a half-step velocity error when a run starts away from
+    //     equilibrium.
     // (2) the kernel's one-off caches (seeded crack health, cached operators)
     //     are built by this call, so the t=0 snapshot below shows the seeded
     //     notch damage / initial stress instead of zeros.
@@ -473,7 +481,9 @@ bool TimeStepping::solveExplicitDynamics(const PDMesh &Mesh,
     {
         const double *rptr=Rate.getDataPtr();
         const double half=0.5*m_Dt*m_Dt;
-        for (int k=0;k<n;k++) uoptr[k]=uptr[k]+half*rptr[k];
+        for (int k=0;k<n;k++) {
+            uoptr[k]=uptr[k]-m_Dt*v0ptr[k]+half*rptr[k];
+        }
     }
     // emit the initial state (t=0) so the time series starts there.
     if (SaveResults) SaveResults(0,0.0);
