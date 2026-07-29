@@ -40,6 +40,12 @@ function(perix_configure_solvers target)
 
     if(USE_CUDSS)
         perix_require_cuda_toolkit()
+        if(NOT TARGET CUDA::cublas)
+            message(FATAL_ERROR
+                "USE_CUDSS requires the CUDA cuBLAS library from a complete "
+                "CUDA toolkit installation."
+            )
+        endif()
         find_path(PERIX_CUDSS_INCLUDE_DIR
             NAMES cudss.h
             HINTS "${CUDSS_DIR}" "$ENV{CUDSS_DIR}"
@@ -63,7 +69,9 @@ function(perix_configure_solvers target)
         target_compile_definitions(${target} PUBLIC PERIX_HAS_CUDSS)
         target_link_libraries(${target}
             PUBLIC CUDA::cudart
-            PRIVATE "${PERIX_CUDSS_LIBRARY}"
+            PRIVATE
+                "${PERIX_CUDSS_LIBRARY}"
+                CUDA::cublas
         )
     endif()
 endfunction()
