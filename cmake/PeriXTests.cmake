@@ -29,13 +29,28 @@ function(perix_register_tests core_target executable_target)
         tensile_plate.json
     )
 
+    set(_perix_test_example_dir "${CMAKE_CURRENT_BINARY_DIR}/examples")
+    file(MAKE_DIRECTORY "${_perix_test_example_dir}")
+    foreach(_deck IN LISTS _perix_public_decks)
+        configure_file(
+            "${PROJECT_SOURCE_DIR}/examples/${_deck}"
+            "${_perix_test_example_dir}/${_deck}"
+            COPYONLY
+        )
+    endforeach()
+    configure_file(
+        "${PROJECT_SOURCE_DIR}/examples/impact2D.msh"
+        "${_perix_test_example_dir}/impact2D.msh"
+        COPYONLY
+    )
+
     add_executable(InputSystemSchemaTests tests/InputSystemSchemaTests.cpp)
     target_link_libraries(InputSystemSchemaTests PRIVATE ${core_target})
 
     set(_perix_schema_arguments)
     foreach(_deck IN LISTS _perix_public_decks)
         list(APPEND _perix_schema_arguments
-            "${PROJECT_SOURCE_DIR}/examples/${_deck}"
+            "${_perix_test_example_dir}/${_deck}"
         )
     endforeach()
     add_test(
@@ -52,7 +67,7 @@ function(perix_register_tests core_target executable_target)
         add_test(
             NAME "ReadOnly_${_example_name}"
             COMMAND ${executable_target}
-                -i "${PROJECT_SOURCE_DIR}/examples/${_deck}"
+                -i "${_perix_test_example_dir}/${_deck}"
                 --read-only
         )
         set_tests_properties("ReadOnly_${_example_name}" PROPERTIES
