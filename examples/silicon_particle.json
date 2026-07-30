@@ -98,7 +98,8 @@
             "value": [
                 0.0,
                 0.0
-            ]
+            ],
+            "direct": true
         }
     },
     "ICSystem": {
