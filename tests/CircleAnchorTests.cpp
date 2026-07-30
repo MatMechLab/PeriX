@@ -89,7 +89,7 @@ int main() {
         }
     }
     expectTrue("bulk point count unchanged",
-               pdMesh.getBulkElmtsNum()==bulkPoints);
+               pdData.BulkElmtsNum==bulkPoints);
     expectTrue("bulk centers unchanged",
                meshData.BulkElmtCenters==bulkCenters);
     expectTrue("bulk volumes unchanged",
