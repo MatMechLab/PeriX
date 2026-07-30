@@ -31,6 +31,7 @@ function(perix_register_tests core_target executable_target)
         kalthoff_winkler.json
         kalthoff_winkler_gpu.json
         poisson.json
+        poisson_amgcl.json
         poisson_gpu.json
         silicon_particle.json
         spinodal.json
@@ -56,6 +57,16 @@ function(perix_register_tests core_target executable_target)
 
     add_executable(InputSystemSchemaTests tests/InputSystemSchemaTests.cpp)
     target_link_libraries(InputSystemSchemaTests PRIVATE ${core_target})
+
+    if(USE_AMGCL)
+        add_executable(AmgclSolverTests tests/AmgclSolverTests.cpp)
+        target_link_libraries(AmgclSolverTests PRIVATE ${core_target})
+        add_test(NAME AmgclSolverTests COMMAND AmgclSolverTests)
+        set_tests_properties(AmgclSolverTests PROPERTIES
+            LABELS "unit;amgcl"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        )
+    endif()
 
     set(_perix_schema_arguments)
     foreach(_deck IN LISTS _perix_public_decks)
@@ -85,4 +96,17 @@ function(perix_register_tests core_target executable_target)
             WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
         )
     endforeach()
+
+    if(USE_AMGCL)
+        add_test(
+            NAME Run_poisson_amgcl
+            COMMAND ${executable_target}
+                -i "${_perix_test_example_dir}/poisson_amgcl.json"
+        )
+        set_tests_properties(Run_poisson_amgcl PROPERTIES
+            LABELS "integration;examples;amgcl"
+            WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+            TIMEOUT 180
+        )
+    endif()
 endfunction()
