@@ -402,6 +402,45 @@ void PDMesh::createPDMesh(MeshData &t_MeshData) {
             ids.erase(std::unique(ids.begin(),ids.end()),ids.end());
             m_Data.PhyNameToNodeIDsMap[name]=std::move(ids);
         }
+
+        // Preserve full-dimensional imported physical groups as PD-node sets.
+        // A generated point cloud can use such a group for a minimal rigid-mode
+        // constraint without a coordinate filter: its bulk-element ids map
+        // directly through BulkElmtPDNodeID to the corresponding material
+        // points. Boundary groups remain handled above as reflected ghost sets.
+        for (int i=0;i<t_MeshData.PhyGroupNum;++i) {
+            if (t_MeshData.PhyGroupDimVec[static_cast<std::size_t>(i)]
+                    !=t_MeshData.MeshDim) {
+                continue;
+            }
+            const std::string &name=
+                t_MeshData.PhyGroupNameVec[static_cast<std::size_t>(i)];
+            if (name=="alldomain") continue;
+            const auto groupIt=
+                t_MeshData.PhyGroupName2BulkElmtIDVecMap.find(name);
+            if (groupIt==t_MeshData.PhyGroupName2BulkElmtIDVecMap.end()) {
+                continue;
+            }
+
+            std::vector<int> ids;
+            ids.reserve(groupIt->second.size());
+            for (const int bulkID : groupIt->second) {
+                if (bulkID<1 || bulkID>t_MeshData.BulkElmtsNum) {
+                    MessagePrinter::printErrorTxt(
+                        "imported bulk physical group '"+name
+                        +"' references an invalid bulk element");
+                    MessagePrinter::exitPeriX();
+                }
+                const int nodeID=
+                    t_MeshData.BulkElmtPDNodeID[
+                        static_cast<std::size_t>(bulkID-1)];
+                if (nodeID>0) ids.push_back(nodeID);
+            }
+            std::sort(ids.begin(),ids.end());
+            ids.erase(std::unique(ids.begin(),ids.end()),ids.end());
+            m_Data.PhyNameToNodeIDsMap[name]=std::move(ids);
+        }
+
         std::vector<int> all(static_cast<std::size_t>(m_Data.NodesNum));
         for (int i=0;i<m_Data.NodesNum;i++) all[static_cast<std::size_t>(i)]=i+1;
         m_Data.PhyNameToNodeIDsMap["alldomain"]=std::move(all);
