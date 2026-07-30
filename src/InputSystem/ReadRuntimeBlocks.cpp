@@ -107,6 +107,15 @@ bool InputSystem::readLinearSolverBlock(const nlohmann::ordered_json &json,
         return false;
 #endif
     }
+    else if (type=="amgcl") {
+#ifdef PERIX_HAS_AMGCL
+        selected=LinearSolverType::AMGCL;
+#else
+        MessagePrinter::printErrorTxt(
+            "LinearSolver: type='amgcl' requires a build with AMGCL enabled");
+        return false;
+#endif
+    }
     solver.setSolverType(selected);
     nlohmann::ordered_json parameters=json.value(
         "params",nlohmann::ordered_json::object());
