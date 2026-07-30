@@ -541,7 +541,17 @@ bool validateBCSystem(const Json &block,SchemaContext &context,std::string &erro
             || !requireString(entry,"phygroup",tag,error,&phygroup)) return false;
 
         if (type=="dirichlet" || type=="neumann" || type=="speciesflux") {
-            if (!allowedKeys(entry,{"type","phygroup","dofs","value"},tag,error)) return false;
+            if (type=="dirichlet") {
+                if (!allowedKeys(entry,{"type","phygroup","dofs","value","direct"},
+                                 tag,error)
+                    || !optionalBoolean(entry,"direct",tag,error)) {
+                    return false;
+                }
+            }
+            else if (!allowedKeys(entry,{"type","phygroup","dofs","value"},
+                                  tag,error)) {
+                return false;
+            }
             std::vector<std::string> dofs;
             if (!readNamedDofs(entry,"dofs",context,tag,error,dofs)) return false;
             std::vector<double> values;
