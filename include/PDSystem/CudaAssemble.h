@@ -141,8 +141,8 @@ bool assembleCahnHilliard(const CahnHilliardMesh &m, const CahnHilliardParams &p
                           const double *u, const double *uold,
                           double *out_Kvals, double *out_rhs);
 
-/** per-element parameters for the small-strain stress-coupled Cahn-Hilliard
- *  device port (device twin of StressCahnHilliardElement). C11/C12/C66 are the
+/** per-element parameters for the public small-strain fracture/stress-coupled
+ *  Cahn-Hilliard device port. C11/C12/C66 are the
  *  plane-stress/strain (or 3D) elastic constants; sigma_h = Kh*(eps_xx+eps_yy
  *  [+eps_zz]) + Ch*(c-cref) is the hydrostatic stress feeding the chemical
  *  potential; A is the chemo-mechanical body-force coefficient (-A grad c).
@@ -160,14 +160,14 @@ struct StressCahnHilliardParams {
 };
 
 /**
- * Assemble the small-strain stress-coupled Cahn-Hilliard residual + Jacobian on
- * the GPU (device twin of StressCahnHilliardElement). One thread per node owns
+ * Assemble the public fracture/stress-coupled Cahn-Hilliard residual + Jacobian
+ * on the GPU. One thread per node owns
  * its (c,mu,ux,uy[,uz]) rows -> row-centred, no atomics. It builds node i's PDDO
  * moment matrix on the device (shared devBuildNodeInverse/devBondOps, exactly
  * like the generic PDDO assembler) for the mechanics + chemo-mechanical operators
  * (Gx,Gy,Gxx,Gyy,Gxy...), and uses the HOST-prebuilt conservative species-flux
- * arrays for the c-equation. The lambda surface-corrected per-bond Laplacian
- * drives both the conservative species flux and the gradient-energy term.
+ * arrays for the c-equation. The host-built bulk-only per-bond Laplacian drives
+ * both the conservative species flux and the gradient-energy term.
  * `rev` is the reverse-bond map, `isghost` the boundary-ghost flags,
  * `mnode` the Picard-frozen mobility. Reuses the generic AssembleMesh (geometry +
  * matrix CSR) so the dispatch shares the same setup. Fills out_Kvals (nnz,
