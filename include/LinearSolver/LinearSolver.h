@@ -28,6 +28,9 @@
 #ifdef PERIX_HAS_CUDSS
 #include "LinearSolver/CudssSolver.h"
 #endif
+#ifdef PERIX_HAS_AMGCL
+#include "LinearSolver/AmgclSolver.h"
+#endif
 
 /**
  * The linear solver dispatcher class
@@ -107,5 +110,8 @@ private:
 #endif
 #ifdef PERIX_HAS_CUDSS
     CudssSolver m_CudssSolver;/**< NVIDIA cuDSS GPU backend */
+#endif
+#ifdef PERIX_HAS_AMGCL
+    AmgclSolver m_AmgclSolver;/**< AMGCL CPU/OpenMP iterative backend */
 #endif
 };
