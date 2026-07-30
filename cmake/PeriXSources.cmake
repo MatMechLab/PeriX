@@ -97,6 +97,10 @@ set(PERIX_CUDSS_SOURCE
     src/LinearSolver/CudssSolver.cpp
 )
 
+set(PERIX_AMGCL_SOURCE
+    src/LinearSolver/AmgclSolver.cpp
+)
+
 set(PERIX_CUDA_ASSEMBLY_SOURCES
     src/PDSystem/FormResidualAndJacobianCUDA.cpp
     src/PDSystem/CudaAssembleKernels.cu
