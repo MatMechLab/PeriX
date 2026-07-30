@@ -32,7 +32,10 @@ function(perix_register_tests core_target executable_target)
         kalthoff_winkler_gpu.json
         poisson.json
         poisson_gpu.json
+        silicon_particle.json
         spinodal.json
+        spinodal_m1_kappa0p01.json
+        spinodal_m4_kappa0p001.json
         tensile_plate.json
     )
 
