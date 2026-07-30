@@ -670,11 +670,12 @@ struct StressChCtx {
 StressChCtx g_stresschctx;
 
 // ===== small-strain stress-coupled Cahn-Hilliard row-centred assembler =====
-// Device twin of StressCahnHilliardElement. One thread per node owns its
+// Device twin of the public fracture/stress-coupled Cahn-Hilliard element.
+// One thread per node owns its
 // (c,mu,ux,uy[,uz]) rows (disjoint CSR rows -> no atomics). It builds node i's
 // PDDO moment matrix on-device (shared devBuildNodeInverse/devBondOps) for the
 // mechanics + chemo-mechanical operators (Gx,Gy,Gxx,Gyy,Gxy[,Gz,Gzz,Gxz,Gyz]),
-// and uses the HOST-prebuilt conservative-flux arrays (lambda-corrected Laplacian
+// and uses the HOST-prebuilt conservative-flux arrays (bulk-only Laplacian
 // lapbond, reverse-bond rev, ghost flags isghost, Picard-frozen mobility mnode)
 // for the c-equation -- so it matches the CPU element exactly. The physics is a
 // direct transcription of computeNodalResidualAndJacobian (regular-solution free energy +
