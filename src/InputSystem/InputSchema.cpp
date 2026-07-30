@@ -882,8 +882,10 @@ bool validateLinearSolver(const Json &block,std::string &error) {
     if (block.contains("type")) {
         if (!requireString(block,"type","LinearSolver",error,&type)) return false;
     }
-    if (type!="default" && type!="pardiso" && type!="cudss") {
-        return fail(error,"LinearSolver: 'type' must be 'default', 'pardiso', or 'cudss'");
+    if (type!="default" && type!="pardiso" && type!="cudss"
+        && type!="amgcl") {
+        return fail(error,
+            "LinearSolver: 'type' must be 'default', 'pardiso', 'cudss', or 'amgcl'");
     }
     Json params=Json::object();
     if (block.contains("params")) {
@@ -901,6 +903,27 @@ bool validateLinearSolver(const Json &block,std::string &error) {
             constexpr auto maximum=static_cast<std::uint64_t>(
                 std::numeric_limits<int>::max());
             if (!requireInteger(params,"msglvl",0,maximum,"LinearSolver.params",error)) return false;
+        }
+    }
+    else if (type=="amgcl") {
+        if (!allowedKeys(params,{"tol","maxiter","verbose"},
+                         "LinearSolver.params",error)) return false;
+        if (params.contains("tol")) {
+            double tolerance=0.0;
+            if (!requireNumber(params,"tol","LinearSolver.params",error,&tolerance)
+                || tolerance<=0.0) {
+                return fail(error,
+                    "LinearSolver.params: 'tol' must be a positive finite number");
+            }
+        }
+        if (params.contains("maxiter")) {
+            constexpr auto maximum=static_cast<std::uint64_t>(
+                std::numeric_limits<int>::max());
+            if (!requireInteger(params,"maxiter",1,maximum,
+                                "LinearSolver.params",error)) return false;
+        }
+        if (!optionalBoolean(params,"verbose","LinearSolver.params",error)) {
+            return false;
         }
     }
     else if (!allowedKeys(params,{},"LinearSolver.params",error)) {
