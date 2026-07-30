@@ -20,5 +20,6 @@
 enum class LinearSolverType {
     DEFAULT, /**< PeriX's in-house profile LDU direct solver (default) */
     PARDISO, /**< Intel MKL PARDISO */
-    CUDSS    /**< NVIDIA cuDSS */
+    CUDSS,   /**< NVIDIA cuDSS */
+    AMGCL    /**< AMGCL CPU/OpenMP iterative solver */
 };
