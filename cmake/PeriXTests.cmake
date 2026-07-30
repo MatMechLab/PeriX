@@ -2,6 +2,7 @@ function(perix_register_tests core_target executable_target)
     set(_perix_unit_tests
         BCSystemTests
         CahnHilliardElementTests
+        CircleAnchorTests
         DiffusionElementTests
         ExodusWriterTests
         ExplicitPDDOFracElementTests
