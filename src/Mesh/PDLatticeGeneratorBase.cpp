@@ -31,6 +31,14 @@ bool PDLatticeGeneratorBase::generate(const Params &params,MeshData &t_MeshData)
         MessagePrinter::printErrorTxt(std::string(shapeName())+" lattice: number of layers N must be >= 1");
         return false;
     }
+    if (params.makeBoundaryGroup
+        && (params.boundaryName=="alldomain"
+            || params.boundaryName=="anchornodes")) {
+        MessagePrinter::printErrorTxt(
+            std::string(shapeName())+" lattice: boundary group name '"
+            +params.boundaryName+"' is reserved");
+        return false;
+    }
 
     const double dx=params.R/static_cast<double>(params.N);
     const std::array<double,3> c=params.center;
@@ -38,6 +46,7 @@ bool PDLatticeGeneratorBase::generate(const Params &params,MeshData &t_MeshData)
     // ---- 1. walk the shells, collect points, volumes and the outer shell ----
     std::vector<std::array<double,3>> points;
     std::vector<double> volumes;
+    std::vector<int> innerShellPointIDs; // minimal rigid-mode anchor set
     std::vector<int> outerShellPointIDs; // 1-based ids of the outermost layer
 
     for (int k=0;k<params.N;k++) {
@@ -55,6 +64,10 @@ bool PDLatticeGeneratorBase::generate(const Params &params,MeshData &t_MeshData)
             return false;
         }
         for (int p=0;p<n_k;p++) volumes.push_back(volPerPoint);
+        if (k==0) {
+            for (int p=0;p<n_k;p++)
+                innerShellPointIDs.push_back(static_cast<int>(before)+p+1);
+        }
         if (k==params.N-1) {
             for (int p=0;p<n_k;p++)
                 outerShellPointIDs.push_back(static_cast<int>(before)+p+1); // 1-based
@@ -159,10 +172,12 @@ bool PDLatticeGeneratorBase::generate(const Params &params,MeshData &t_MeshData)
     t_MeshData.Ymin=ymin; t_MeshData.Ymax=ymax;
     t_MeshData.Zmin=(D==3)?zmin:0.0; t_MeshData.Zmax=(D==3)?zmax:0.0;
 
-    // ---- 6. physical groups: "alldomain" (bulk) + optional "outer" boundary --
+    // ---- 6. physical groups: full bulk, optional outer boundary, and the
+    // innermost shell as a minimal rigid-mode anchor set. The anchor contains
+    // material points only; it does not add nodes or alter lattice geometry. --
     const int boundaryDim=D-1;
     const bool haveBoundary=makeBoundary && !boundaryConn.empty();
-    t_MeshData.PhyGroupNum=haveBoundary?2:1;
+    t_MeshData.PhyGroupNum=haveBoundary?3:2;
     t_MeshData.PhyGroupDimVec={D};
     t_MeshData.PhyGroupIDVec={0};
     t_MeshData.PhyGroupNameVec={"alldomain"};
@@ -186,6 +201,27 @@ bool PDLatticeGeneratorBase::generate(const Params &params,MeshData &t_MeshData)
         t_MeshData.PhyGroupName2BoundaryNormalVecMap[name]=boundaryNormals;
         t_MeshData.PhyGroupName2BoundaryMeasureVecMap[name]=boundaryMeasures;
     }
+
+    const int anchorID=haveBoundary?2:1;
+    const std::string anchorName="anchornodes";
+    std::vector<std::vector<int>> anchorConn;
+    anchorConn.reserve(innerShellPointIDs.size());
+    for (const int pointID : innerShellPointIDs) {
+        anchorConn.push_back({pointID});
+    }
+    t_MeshData.PhyGroupDimVec.push_back(D);
+    t_MeshData.PhyGroupIDVec.push_back(anchorID);
+    t_MeshData.PhyGroupNameVec.push_back(anchorName);
+    t_MeshData.PhyGroupElmtsNumVec.push_back(
+        static_cast<int>(anchorConn.size()));
+    t_MeshData.PhyGroupID2NameMap[anchorID]=anchorName;
+    t_MeshData.PhyGroupName2IDMap[anchorName]=anchorID;
+    t_MeshData.PhyGroupName2ElmtConnMap[anchorName]=anchorConn;
+    t_MeshData.PhyGroupID2ElmtConnMap[anchorID]=anchorConn;
+    t_MeshData.PhyGroupName2BulkElmtIDVecMap[anchorName]=
+        innerShellPointIDs;
+    t_MeshData.PhyGroupID2BulkElmtIDVecMap[anchorID]=
+        innerShellPointIDs;
 
     char buff[128];
     snprintf(buff,sizeof(buff),
