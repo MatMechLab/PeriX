@@ -4,6 +4,9 @@ set(ONEAPI_DIR "" CACHE PATH "Intel oneAPI root or MKL root (optional; MKLROOT i
 option(USE_CUDSS "Build the manuscript NVIDIA cuDSS backend" OFF)
 set(CUDSS_DIR "" CACHE PATH "NVIDIA cuDSS installation root")
 
+option(USE_AMGCL "Build the optional public AMGCL CPU/OpenMP backend" OFF)
+set(AMGCL_DIR "" CACHE PATH "AMGCL source or installation root")
+
 function(perix_configure_solvers target)
     if(USE_ONEAPI)
         find_path(PERIX_MKL_INCLUDE_DIR
@@ -78,5 +81,34 @@ function(perix_configure_solvers target)
                 "${PERIX_CUDSS_LIBRARY}"
                 CUDA::cublas
         )
+    endif()
+
+    if(USE_AMGCL)
+        find_path(PERIX_AMGCL_INCLUDE_DIR
+            NAMES amgcl/amg.hpp
+            HINTS
+                "${AMGCL_DIR}"
+                "$ENV{AMGCL_DIR}"
+                "${AMGCL_DIR}/include"
+                "$ENV{AMGCL_DIR}/include"
+        )
+        mark_as_advanced(PERIX_AMGCL_INCLUDE_DIR)
+        if(NOT PERIX_AMGCL_INCLUDE_DIR)
+            message(FATAL_ERROR
+                "USE_AMGCL requires the header amgcl/amg.hpp. "
+                "Set AMGCL_DIR to the AMGCL source or installation root."
+            )
+        endif()
+
+        find_package(OpenMP REQUIRED COMPONENTS CXX)
+        target_sources(${target} PRIVATE ${PERIX_AMGCL_SOURCE})
+        target_include_directories(${target} PRIVATE
+            "${PERIX_AMGCL_INCLUDE_DIR}"
+        )
+        target_compile_definitions(${target}
+            PUBLIC PERIX_HAS_AMGCL
+            PRIVATE AMGCL_NO_BOOST
+        )
+        target_link_libraries(${target} PUBLIC OpenMP::OpenMP_CXX)
     endif()
 endfunction()
