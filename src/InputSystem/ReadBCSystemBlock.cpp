@@ -48,6 +48,7 @@ bool InputSystem::readBCSystemBlock(const nlohmann::ordered_json &json,
         if (type=="dirichlet") {
             auto built=std::make_unique<DirichletBC>(values(entry));
             built->setComponents(dofSlots(entry,dofs));
+            built->setDirect(entry.value("direct",false));
             condition=std::move(built);
         }
         else if (type=="neumann") {
