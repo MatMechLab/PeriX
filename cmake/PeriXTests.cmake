@@ -1,12 +1,18 @@
 function(perix_register_tests core_target executable_target)
     set(_perix_unit_tests
         BCSystemTests
+        CahnHilliardElementTests
+        DiffusionElementTests
         ExodusWriterTests
+        ExplicitPDDOFracElementTests
+        FracStressCahnHilliardElementTests
         ICSystemTests
         InitialVelocityTests
         JobSystemTests
         MeshModifyTests
         OutputSystemTests
+        PDDODynamicFracElementTests
+        PoissonElementTests
     )
 
     foreach(_test IN LISTS _perix_unit_tests)
