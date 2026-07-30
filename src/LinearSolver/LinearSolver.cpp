@@ -52,6 +52,17 @@ void LinearSolver::setSolverType(const LinearSolverType &type){
         MessagePrinter::exitPeriX();
 #endif
     }
+    else if(type==LinearSolverType::AMGCL){
+#ifdef PERIX_HAS_AMGCL
+        m_SolverType=LinearSolverType::AMGCL;
+        m_LinearSolverName="AMGCL";
+#else
+        MessagePrinter::printErrorTxt(
+            "AMGCL backend was requested but PeriX was built without AMGCL support. "
+            "Re-configure with -DUSE_AMGCL=on -DAMGCL_DIR=/path/to/amgcl.");
+        MessagePrinter::exitPeriX();
+#endif
+    }
     else{
         MessagePrinter::printErrorTxt("unsupported linear solver type");
         MessagePrinter::exitPeriX();
@@ -72,6 +83,11 @@ void LinearSolver::init(SparseMatrix &K){
         m_CudssSolver.initSolver(K,m_Parameters);
     }
 #endif
+#ifdef PERIX_HAS_AMGCL
+    else if(m_SolverType==LinearSolverType::AMGCL){
+        m_AmgclSolver.initSolver(K,m_Parameters);
+    }
+#endif
     else{
         MessagePrinter::printErrorTxt("Unsupported solver type for init");
         MessagePrinter::exitPeriX();
@@ -90,6 +106,11 @@ bool LinearSolver::solve(SparseMatrix &A,VectorXd &rhs,VectorXd &x){
 #ifdef PERIX_HAS_CUDSS
     else if(m_SolverType==LinearSolverType::CUDSS){
         return m_CudssSolver.solveLinearSystem(A,rhs,x);
+    }
+#endif
+#ifdef PERIX_HAS_AMGCL
+    else if(m_SolverType==LinearSolverType::AMGCL){
+        return m_AmgclSolver.solveLinearSystem(A,rhs,x);
     }
 #endif
     else{
