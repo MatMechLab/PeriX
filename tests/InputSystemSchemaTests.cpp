@@ -167,6 +167,32 @@ int main(int argc,char *argv[]) {
     }
 
     changed=documents.front();
+    changed["LinearSolver"]={
+        {"type","amgcl"},
+        {"params",{
+            {"tol",1.0e-10},
+            {"maxiter",200},
+            {"verbose",false}
+        }}
+    };
+    expectAccepted("minimal AMGCL parameters",changed);
+
+    changed["LinearSolver"]["params"]["unsupported_option"]=true;
+    expectRejected("unsupported AMGCL tuning",changed);
+
+    changed["LinearSolver"]["params"].erase("unsupported_option");
+    changed["LinearSolver"]["params"]["tol"]=0.0;
+    expectRejected("nonpositive AMGCL tolerance",changed);
+
+    changed["LinearSolver"]["params"]["tol"]=1.0e-10;
+    changed["LinearSolver"]["params"]["maxiter"]=0;
+    expectRejected("nonpositive AMGCL maxiter",changed);
+
+    changed["LinearSolver"]["params"]["maxiter"]=200;
+    changed["LinearSolver"]["params"]["verbose"]=1;
+    expectRejected("nonboolean AMGCL verbose",changed);
+
+    changed=documents.front();
     changed["JobSystem"]["not_public_option"]=true;
     expectRejected("unknown job option",changed);
 
