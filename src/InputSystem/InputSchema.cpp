@@ -506,6 +506,14 @@ bool validateElementDofs(const std::string &type,SchemaContext &context,
              : sameDofs(context.dofs,{"ux","uy"})
                || sameDofs(context.dofs,{"ux","uy","uz"});
     }
+    else if (type=="stress_cahnhilliard") {
+        match=context.meshDim==3
+            ? sameDofs(context.dofs,{"c","mu","ux","uy","uz"})
+            : context.meshDim==2
+                ? sameDofs(context.dofs,{"c","mu","ux","uy"})
+                : sameDofs(context.dofs,{"c","mu","ux","uy"})
+                  || sameDofs(context.dofs,{"c","mu","ux","uy","uz"});
+    }
     else if (type=="frac_stress_cahnhilliard") {
         match=context.meshDim==3
             ? sameDofs(context.dofs,{"c","mu","ux","uy","uz"})
@@ -571,6 +579,23 @@ bool validateElmtSystem(const Json &block,SchemaContext &context,std::string &er
         context.fracture=true;
         context.explicitDynamics=(type=="explicit_pddo_frac");
     }
+    else if (type=="stress_cahnhilliard") {
+        if (!allowedKeys(params,{"E","nu","D","Omega","cref","chi","kappa","state"},
+                         tag+".params",error)) return false;
+        double nu=0.0;
+        if (!requirePositive(params,"E",tag+".params",error)
+            || !requireNumber(params,"nu",tag+".params",error,&nu)
+            || !requirePositive(params,"D",tag+".params",error)
+            || !requireNumber(params,"Omega",tag+".params",error)
+            || !requireNumber(params,"cref",tag+".params",error)
+            || !requireNumber(params,"chi",tag+".params",error)
+            || !requirePositive(params,"kappa",tag+".params",error)
+            || !validatePlaneState(params,context.meshDim,tag+".params",error)) return false;
+        if (!(nu>-1.0 && nu<0.5)) {
+            return fail(error,tag+".params: 'nu' must lie in (-1,0.5)");
+        }
+        context.coupledSpecies=true;
+    }
     else if (type=="frac_stress_cahnhilliard") {
         if (!allowedKeys(params,{"E","nu","D","Omega","cref","chi","kappa","rho",
                                  "Gc","state","tension_only","damage",
@@ -602,7 +627,7 @@ bool validateElmtSystem(const Json &block,SchemaContext &context,std::string &er
     else {
         return fail(error,tag+": public element type must be one of poisson, diffusion, "
                           "cahnhilliard, pddo_dynamic_frac, explicit_pddo_frac, "
-                          "frac_stress_cahnhilliard");
+                          "stress_cahnhilliard, frac_stress_cahnhilliard");
     }
 
     context.elementType=type;
