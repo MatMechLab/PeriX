@@ -54,6 +54,11 @@ function(perix_register_tests core_target executable_target)
         "${_perix_test_example_dir}/impact2D.msh"
         COPYONLY
     )
+    configure_file(
+        "${PROJECT_SOURCE_DIR}/examples/impact3D.msh"
+        "${_perix_test_example_dir}/impact3D.msh"
+        COPYONLY
+    )
 
     add_executable(InputSystemSchemaTests tests/InputSystemSchemaTests.cpp)
     target_link_libraries(InputSystemSchemaTests PRIVATE ${core_target})
