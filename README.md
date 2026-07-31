@@ -194,6 +194,14 @@ takes 172 s on the default 96-wide team and 1.6 s once the team is sized to the
 work. Set the key explicitly only to override that heuristic; it never changes
 the assembly team, which always follows `OMP_NUM_THREADS`.
 
+If a solve still fails, check first that **every** boundary-ghost row carries a
+boundary condition. A ghost wall left without one keeps a one-sided PD equation,
+which makes the Jacobian nearly rank deficient and progressively worse under
+mesh refinement -- an iterative solve may not converge at all, and a direct
+solve silently loses accuracy and reproducibility. PeriX reports such rows at
+startup, naming the ghost groups and DoF slots involved; the cure is to state
+the natural condition (a zero `neumann` or `pdtraction` BC) on the free walls.
+
 PARDISO and AMGCL may be enabled in the same CPU build.
 
 ### CUDA assembly and NVIDIA cuDSS
