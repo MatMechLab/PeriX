@@ -15,7 +15,9 @@
 #include "BCSystem/BCSystem.h"
 
 #include <algorithm>
+#include <map>
 #include <set>
+#include <unordered_map>
 #include <utility>
 
 #include "BCSystem/DirichletBC.h"
@@ -138,6 +140,74 @@ std::vector<char> BCSystem::collectPresetDofMask(
             Mesh,nodeIDs,DofsPerNode,mask);
     }
     return mask;
+}
+
+int BCSystem::warnUnconstrainedGhostRows(const PDMesh &Mesh,
+                                         const int &DofsPerNode) const {
+    const auto &data=Mesh.getDataConstRef();
+    const int nodesNum=Mesh.getNodesNum();
+    if (nodesNum<1 || DofsPerNode<1
+        || static_cast<int>(data.GhostMirrorBulkID.size())<nodesNum) {
+        return 0;
+    }
+
+    const std::vector<char> mask=collectPresetDofMask(Mesh,DofsPerNode);
+
+    // Which "<name>nodes_ghost" group each ghost belongs to, so the report can
+    // name the wall the user has to complete instead of a bare node count.
+    std::unordered_map<int,std::string> ghostGroup;
+    for (const auto &[phyName,nodeIDs] : data.PhyNameToNodeIDsMap) {
+        if (phyName.size()<6
+            || phyName.compare(phyName.size()-6,6,"_ghost")!=0) {
+            continue;
+        }
+        for (const int nodeID : nodeIDs) {
+            if (nodeID>=1 && nodeID<=nodesNum) {
+                ghostGroup.emplace(nodeID,phyName);
+            }
+        }
+    }
+
+    std::map<std::string,std::set<int>> missing;
+    int missingRows=0;
+    for (int nodeID=1;nodeID<=nodesNum;++nodeID) {
+        if (data.GhostMirrorBulkID[static_cast<std::size_t>(nodeID-1)]<1) {
+            continue;
+        }
+        const std::size_t base=static_cast<std::size_t>(nodeID-1)
+                             *static_cast<std::size_t>(DofsPerNode);
+        for (int slot=0;slot<DofsPerNode;++slot) {
+            if (mask[base+static_cast<std::size_t>(slot)]) continue;
+            ++missingRows;
+            const auto it=ghostGroup.find(nodeID);
+            missing[it==ghostGroup.end() ? std::string("<unnamed ghosts>")
+                                         : it->second].insert(slot+1);
+        }
+    }
+    if (missingRows==0) return 0;
+
+    MessagePrinter::printWarningTxt(
+        "BCSystem: "+std::to_string(missingRows)+" boundary-ghost DoF rows "
+        "carry no boundary condition. Their one-sided PD equations leave the "
+        "Jacobian nearly rank deficient, and the deficiency grows with mesh "
+        "refinement: a direct solve degrades and stops being reproducible, "
+        "and an iterative solve may not converge at all.");
+    for (const auto &[phyName,slots] : missing) {
+        std::string line="  ghost group '"+phyName+"': DoF slot";
+        line+=slots.size()>1 ? "s " : " ";
+        bool first=true;
+        for (const int slot : slots) {
+            if (!first) line+=",";
+            line+=std::to_string(slot);
+            first=false;
+        }
+        MessagePrinter::printWarningTxt(line);
+    }
+    MessagePrinter::printWarningTxt(
+        "  Give every free wall its natural condition (a zero 'neumann' or "
+        "'pdtraction' BC on the listed slots). This does not change the "
+        "physics and it sharpens the direct solvers too.");
+    return missingRows;
 }
 
 void BCSystem::applyBCs(const PDMesh &Mesh,
