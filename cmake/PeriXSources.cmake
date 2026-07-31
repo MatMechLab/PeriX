@@ -17,6 +17,7 @@ set(PERIX_CORE_SOURCES
     src/ElmtSystem/FracStressCahnHilliardElement.cpp
     src/ElmtSystem/PDDODynamicFracElement.cpp
     src/ElmtSystem/PoissonElement.cpp
+    src/ElmtSystem/StressCahnHilliardElement.cpp
 
     src/ICSystem/ICBase.cpp
     src/ICSystem/ICSystem.cpp
