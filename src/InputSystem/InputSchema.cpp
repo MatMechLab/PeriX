@@ -285,8 +285,111 @@ bool validatePDMesh(const Json &pdMesh,std::string &error) {
     return true;
 }
 
+// One of 'angle_degrees' / 'angle_radians', never both.
+bool validatePresetAngle(const Json &item,const std::string &tag,
+                         std::string &error) {
+    const bool hasDegrees=item.contains("angle_degrees");
+    const bool hasRadians=item.contains("angle_radians");
+    if (hasDegrees && hasRadians) {
+        return fail(error,tag+": use either 'angle_degrees' or 'angle_radians', not both");
+    }
+    if (hasDegrees && !requireNumber(item,"angle_degrees",tag,error)) return false;
+    if (hasRadians && !requireNumber(item,"angle_radians",tag,error)) return false;
+    return true;
+}
+
+bool validateVec3(const Json &item,const std::string &key,
+                  const std::string &tag,std::string &error) {
+    if (!item.contains(key)) return true;
+    const auto &value=item.at(key);
+    if (!value.is_array() || value.size()!=3) {
+        return fail(error,tag+": '"+key+"' must be an array of three numbers");
+    }
+    for (const auto &component:value) {
+        if (!component.is_number() || !std::isfinite(component.get<double>())) {
+            return fail(error,tag+": '"+key+"' must be an array of three finite numbers");
+        }
+    }
+    return true;
+}
+
+bool validatePresetLabel(const Json &item,const std::string &tag,
+                         std::string &error) {
+    if (item.contains("label")
+        && (!item.at("label").is_string()
+            || item.at("label").get<std::string>().empty())) {
+        return fail(error,tag+": 'label' must be a non-empty string");
+    }
+    return true;
+}
+
+bool validateMeshModifyPresets(const Json &presets,std::string &error) {
+    if (!presets.is_array() || presets.empty()) {
+        return fail(error,"MeshModify: 'Presets' must be a non-empty array");
+    }
+    for (std::size_t i=0;i<presets.size();++i) {
+        const auto &item=presets[i];
+        const std::string tag="MeshModify.Presets["+std::to_string(i)+"]";
+        if (!item.is_object()) return fail(error,tag+" must be an object");
+        std::string type;
+        if (!requireString(item,"type",tag,error,&type)) return false;
+        if (!validatePresetLabel(item,tag,error)) return false;
+        if (!validatePresetAngle(item,tag,error)) return false;
+
+        double length=0.0;
+        if (type=="center_crack") {
+            if (!allowedKeys(item,{"type","label","angle_degrees","angle_radians",
+                                   "center_x","center_y","center_z","center",
+                                   "length","width","normal","axis"},tag,error)) {
+                return false;
+            }
+            if (item.contains("center")) {
+                if (item.contains("center_x") || item.contains("center_y")
+                    || item.contains("center_z")) {
+                    return fail(error,tag+": use either 'center' or "
+                                          "'center_x'/'center_y'/'center_z', not both");
+                }
+                if (!validateVec3(item,"center",tag,error)) return false;
+            }
+            else {
+                if (!requireNumber(item,"center_x",tag,error)
+                    || !requireNumber(item,"center_y",tag,error)) return false;
+                if (item.contains("center_z")
+                    && !requireNumber(item,"center_z",tag,error)) return false;
+            }
+            if (!validateVec3(item,"normal",tag,error)) return false;
+            if (!validateVec3(item,"axis",tag,error)) return false;
+        }
+        else if (type=="edge_crack") {
+            if (!allowedKeys(item,{"type","label","angle_degrees","angle_radians",
+                                   "side","position","length","width"},tag,error)) {
+                return false;
+            }
+            std::string side;
+            if (!requireString(item,"side",tag,error,&side)) return false;
+            if (side!="left" && side!="right" && side!="bottom" && side!="top") {
+                return fail(error,tag+": 'side' must be 'left', 'right', 'bottom' or 'top'");
+            }
+            if (!requireNumber(item,"position",tag,error)) return false;
+        }
+        else {
+            return fail(error,tag+": unsupported preset type '"+type
+                              +"' (supported: center_crack, edge_crack)");
+        }
+
+        if (!requireNumber(item,"length",tag,error,&length)) return false;
+        if (!(length>0.0)) return fail(error,tag+": 'length' must be a positive number");
+        if (item.contains("width")) {
+            double width=0.0;
+            if (!requireNumber(item,"width",tag,error,&width)) return false;
+            if (!(width>0.0)) return fail(error,tag+": 'width' must be a positive number");
+        }
+    }
+    return true;
+}
+
 bool validateMeshModify(const Json &block,std::string &error) {
-    if (!allowedKeys(block,{"type","treatment","Cracks"},"MeshModify",error)) return false;
+    if (!allowedKeys(block,{"type","treatment","Cracks","Presets"},"MeshModify",error)) return false;
     std::string type,treatment;
     if (!requireString(block,"type","MeshModify",error,&type)
         || !requireString(block,"treatment","MeshModify",error,&treatment)) return false;
@@ -296,8 +399,16 @@ bool validateMeshModify(const Json &block,std::string &error) {
     if (treatment!="force_only") {
         return fail(error,"MeshModify: the published treatment is 'force_only'");
     }
-    if (!block.contains("Cracks") || !block.at("Cracks").is_array()
-        || block.at("Cracks").empty()) {
+    const bool hasCracks=block.contains("Cracks");
+    const bool hasPresets=block.contains("Presets");
+    if (!hasCracks && !hasPresets) {
+        return fail(error,"MeshModify: give at least one of 'Cracks' or 'Presets'");
+    }
+    if (hasPresets && !validateMeshModifyPresets(block.at("Presets"),error)) {
+        return false;
+    }
+    if (!hasCracks) return true;
+    if (!block.at("Cracks").is_array() || block.at("Cracks").empty()) {
         return fail(error,"MeshModify: 'Cracks' must be a non-empty array");
     }
     const auto &cracks=block.at("Cracks");
