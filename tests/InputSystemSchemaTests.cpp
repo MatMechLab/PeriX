@@ -248,6 +248,59 @@ int main(int argc,char *argv[]) {
         changed=*fracture;
         changed["MeshModify"]["Cracks"]=Json::array();
         expectRejected("empty crack list",changed);
+
+        changed=*fracture;
+        changed["MeshModify"].erase("Cracks");
+        changed["MeshModify"]["Presets"]=Json::array({{
+            {"type","center_crack"},{"label","notch"},
+            {"center_x",0.1},{"center_y",0.05},{"length",0.05}
+        }});
+        expectAccepted("center_crack preset",changed);
+
+        changed["MeshModify"]["Presets"][0]["angle_degrees"]=30.0;
+        expectAccepted("center_crack preset with an angle",changed);
+
+        changed["MeshModify"]["Presets"][0]["angle_radians"]=0.5;
+        expectRejected("center_crack preset with two angle units",changed);
+
+        changed=*fracture;
+        changed["MeshModify"].erase("Cracks");
+        changed["MeshModify"]["Presets"]=Json::array({{
+            {"type","center_crack"},
+            {"center",Json::array({0.1,0.05,0.0})},
+            {"normal",Json::array({1.0,0.0,0.0})},
+            {"length",0.05},{"width",0.009}
+        }});
+        expectAccepted("3D oriented center_crack preset",changed);
+
+        changed["MeshModify"]["Presets"][0]["center_x"]=0.1;
+        expectRejected("center given twice",changed);
+
+        changed=*fracture;
+        changed["MeshModify"].erase("Cracks");
+        changed["MeshModify"]["Presets"]=Json::array({{
+            {"type","edge_crack"},{"side","left"},
+            {"position",0.05},{"length",0.02}
+        }});
+        expectAccepted("edge_crack preset",changed);
+
+        changed["MeshModify"]["Presets"][0]["side"]="diagonal";
+        expectRejected("edge_crack on an unknown side",changed);
+
+        changed["MeshModify"]["Presets"][0]["side"]="left";
+        changed["MeshModify"]["Presets"][0]["length"]=0.0;
+        expectRejected("zero-length preset",changed);
+
+        changed=*fracture;
+        changed["MeshModify"].erase("Cracks");
+        changed["MeshModify"]["Presets"]=Json::array({{
+            {"type","spiral_crack"},{"length",0.02}
+        }});
+        expectRejected("unknown preset type",changed);
+
+        changed=*fracture;
+        changed["MeshModify"].erase("Cracks");
+        expectRejected("mesh modification without cracks or presets",changed);
     }
     else {
         std::printf("FAIL did not find pre-existing-crack example\n");
