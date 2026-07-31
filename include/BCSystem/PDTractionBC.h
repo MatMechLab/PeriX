@@ -95,6 +95,11 @@ public:
         (void)RHS;
     }
 
+    void presetControlledRows(const PDMesh &Mesh,
+                              const std::vector<int> &NodeIDs,
+                              const int &DofsPerNode,
+                              std::vector<char> &mask) const override;
+
     void applyWithOperators(const PDMesh &Mesh,
                             PDOperators &Operators,
                             const std::vector<int> &NodeIDs,
