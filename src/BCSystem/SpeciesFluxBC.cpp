@@ -63,6 +63,27 @@ void validateDefinition(const std::vector<int> &components,
 }
 }
 
+void SpeciesFluxBC::presetControlledRows(const PDMesh &Mesh,
+                                         const std::vector<int> &NodeIDs,
+                                         const int &DofsPerNode,
+                                         std::vector<char> &mask) const {
+    const auto components=resolveComponents(m_Components);
+    validateDefinition(components,m_Values,DofsPerNode);
+
+    const auto &mirror=Mesh.getDataConstRef().GhostMirrorBulkID;
+    if (static_cast<int>(mirror.size())<Mesh.getNodesNum()) return;
+
+    for (const int ghostID : NodeIDs) {
+        if (ghostID<1 || ghostID>Mesh.getNodesNum()) continue;
+        if (mirror[static_cast<std::size_t>(ghostID-1)]<1) continue;
+        const std::size_t base=static_cast<std::size_t>(ghostID-1)
+                             *static_cast<std::size_t>(DofsPerNode);
+        for (const int component : components) {
+            mask[base+static_cast<std::size_t>(component-1)]=1;
+        }
+    }
+}
+
 void SpeciesFluxBC::apply(const PDMesh &Mesh,
                           const std::vector<int> &NodeIDs,
                           const int &DofsPerNode,
