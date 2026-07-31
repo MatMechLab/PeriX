@@ -20,6 +20,7 @@ needed by the accompanying manuscript:
 - `CahnHilliardElement`
 - `PDDODynamicFracElement`
 - `ExplicitPDDOFracElement`
+- `StressCahnHilliardElement`
 - `FracStressCahnHilliardElement`
 
 Thermal transport and other unpublished element extensions are not included.
