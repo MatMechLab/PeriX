@@ -9,6 +9,10 @@
 #include <cstdio>
 #include <vector>
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include "LinearSolver/AmgclSolver.h"
 
 namespace {
@@ -110,12 +114,8 @@ SparseMatrix twoDofBlockMatrix() {
 
 bool solveKnownSystem(
     const char *name,SparseMatrix &matrix,AmgclSolver &solver,
-    const VectorXd &expected,const bool initialize) {
-    nlohmann::ordered_json parameters={
-        {"tol",1.0e-11},
-        {"maxiter",300},
-        {"verbose",false}
-    };
+    const VectorXd &expected,const bool initialize,
+    nlohmann::ordered_json &parameters) {
     if (initialize) solver.initSolver(matrix,parameters);
 
     VectorXd rhs=multiply(matrix,expected);
@@ -140,10 +140,31 @@ bool solveKnownSystem(
     return true;
 }
 
+bool solveKnownSystem(
+    const char *name,SparseMatrix &matrix,AmgclSolver &solver,
+    const VectorXd &expected,const bool initialize) {
+    nlohmann::ordered_json parameters={
+        {"tol",1.0e-11},
+        {"maxiter",300},
+        {"verbose",false}
+    };
+    return solveKnownSystem(
+        name,matrix,solver,expected,initialize,parameters);
+}
+
 } // namespace
 
 int main() {
     int failures=0;
+
+    // Snapshot the ambient OpenMP width before any solve runs. The solver sizes
+    // its own team for the AMGCL kernels, but PeriX's assembly loops must keep
+    // running on the user's OMP_NUM_THREADS team, so every solve has to put the
+    // width back. Sampling this after a solve would compare a clobbered value
+    // against itself and pass even when the restore is missing.
+#ifdef _OPENMP
+    const int ambientThreads=omp_get_max_threads();
+#endif
 
     SparseMatrix scalar=scalarPoissonMatrix(23);
     VectorXd scalarExpected(23,0.0);
@@ -174,6 +195,37 @@ int main() {
             "reused preconditioner",block,blockSolver,blockExpected,false)) {
         ++failures;
     }
+
+    // An explicit team must be honoured without changing the answer.
+    SparseMatrix pinned=scalarPoissonMatrix(23);
+    VectorXd pinnedExpected(23,0.0);
+    for (int row=1;row<=pinnedExpected.getSize();++row) {
+        pinnedExpected(row)=std::sin(0.2*static_cast<double>(row));
+    }
+    nlohmann::ordered_json pinnedParameters={
+        {"tol",1.0e-11},
+        {"maxiter",300},
+        {"verbose",false},
+        {"solver_threads",2}
+    };
+    AmgclSolver pinnedSolver;
+    if (!solveKnownSystem(
+            "explicit solver_threads",pinned,pinnedSolver,pinnedExpected,true,
+            pinnedParameters)) {
+        ++failures;
+    }
+
+    // The solver sizes its own OpenMP team, but PeriX's assembly loops must keep
+    // running on the user's OMP_NUM_THREADS width, so the override has to be put
+    // back once the solve returns.
+#ifdef _OPENMP
+    if (omp_get_max_threads()!=ambientThreads) {
+        std::printf(
+            "FAIL thread-team restore: ambient threads %d became %d\n",
+            ambientThreads,omp_get_max_threads());
+        ++failures;
+    }
+#endif
 
     if (failures==0) {
         std::printf("AMGCL solver tests passed\n");
