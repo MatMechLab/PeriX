@@ -81,6 +81,13 @@ void PDProblem::init(int args,char *argv[]) {
         MessagePrinter::exitPeriX();
     }
 
+    // Report ghost walls left without any boundary condition. Their one-sided
+    // PD rows are the single most common cause of a Jacobian that a direct
+    // solver only just survives and an iterative solver cannot precondition at
+    // all -- and the symptom (a solve that stops converging once the mesh is
+    // refined) points nowhere near the input file, so say it here.
+    m_BCSystem.warnUnconstrainedGhostRows(m_PDMesh,m_ElmtSystem.getMaxDofsPerNode());
+
     MessagePrinter::printNormalTxt("Start to setup pd operators ...");
     m_Timer.startTimer();
     m_Operators.setDim(m_Mesh.getMeshDataRef().MeshDim);
