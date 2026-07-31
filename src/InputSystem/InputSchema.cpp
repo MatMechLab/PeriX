@@ -906,7 +906,7 @@ bool validateLinearSolver(const Json &block,std::string &error) {
         }
     }
     else if (type=="amgcl") {
-        if (!allowedKeys(params,{"tol","maxiter","verbose","iluk_level"},
+        if (!allowedKeys(params,{"tol","maxiter","verbose","iluk_level","solver_threads"},
                          "LinearSolver.params",error)) return false;
         if (params.contains("tol")) {
             double tolerance=0.0;
@@ -924,6 +924,12 @@ bool validateLinearSolver(const Json &block,std::string &error) {
         }
         if (params.contains("iluk_level")) {
             if (!requireInteger(params,"iluk_level",1,6,
+                                "LinearSolver.params",error)) return false;
+        }
+        if (params.contains("solver_threads")) {
+            constexpr auto maximum=static_cast<std::uint64_t>(
+                std::numeric_limits<int>::max());
+            if (!requireInteger(params,"solver_threads",0,maximum,
                                 "LinearSolver.params",error)) return false;
         }
         if (!optionalBoolean(params,"verbose","LinearSolver.params",error)) {
