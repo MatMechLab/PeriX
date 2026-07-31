@@ -68,6 +68,23 @@ public:
         const PDMesh &Mesh,const int &DofsPerNode) const;
 
     /**
+     * Report boundary ghost rows that no boundary condition replaces.
+     *
+     * Such a row keeps the one-sided PD equation assembled on a truncated
+     * family. It is not an equation for the ghost value, so the Jacobian is
+     * left nearly rank deficient, and the deficiency grows under mesh
+     * refinement: a direct factorization hides it behind pivot perturbation
+     * (with a solution that degrades as the mesh is refined and stops being
+     * reproducible run to run), while no incomplete factorization or
+     * multigrid hierarchy built from it is usable at all. Stating the natural
+     * condition explicitly -- a zero Neumann/traction condition on the free
+     * walls -- costs nothing physically and cures both. Returns the number of
+     * unconstrained ghost DoF rows found.
+     */
+    int warnUnconstrainedGhostRows(const PDMesh &Mesh,
+                                   const int &DofsPerNode) const;
+
+    /**
      * Apply all assembled boundary equations and sources. Uold and Info are
      * accepted because they are part of the nonlinear-solver interface; the
      * manuscript-scope BC kernels do not require history variables.
