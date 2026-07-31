@@ -302,6 +302,7 @@ ASCII arrays, which are easy to inspect but can be large.
 | `spinodal_m4_kappa0p001.json` | Spinodal parameter study | OpenMP | PARDISO |
 | `tensile_plate.json` | Implicit dynamic fracture | OpenMP | PARDISO |
 | `kalthoff_winkler.json` | Explicit impact fracture | OpenMP | Matrix-free |
+| `kalthoff_winkler_3D.json` | Explicit 3D impact fracture, preset crack planes | OpenMP | Matrix-free |
 | `kalthoff_winkler_gpu.json` | Explicit impact fracture | CUDA | Matrix-free |
 | `silicon_particle.json` | Coupled species/stress/fracture | OpenMP | PARDISO |
 
