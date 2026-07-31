@@ -39,6 +39,7 @@ function(perix_register_tests core_target executable_target)
         spinodal.json
         spinodal_m1_kappa0p01.json
         spinodal_m4_kappa0p001.json
+        stress_cahnhilliard.json
         tensile_plate.json
     )
 
