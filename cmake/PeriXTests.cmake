@@ -14,6 +14,7 @@ function(perix_register_tests core_target executable_target)
         OutputSystemTests
         PDDODynamicFracElementTests
         PoissonElementTests
+        StressCahnHilliardElementTests
     )
 
     foreach(_test IN LISTS _perix_unit_tests)
