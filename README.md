@@ -337,6 +337,48 @@ worse as the mesh is refined. Stating the natural condition explicitly (a zero
 is what makes an iterative solve converge and a direct solve reproducible. PeriX
 prints a warning at startup naming any ghost group and DoF slot left uncovered.
 
+## Pre-existing cracks
+
+`MeshModify` registers cracks before the peridynamic families are built. Cracks
+can be listed explicitly as 2D segments under `Cracks`, or described
+geometrically under `Presets`:
+
+```json
+"MeshModify": {
+  "type": "pre_existing_cracks",
+  "treatment": "force_only",
+  "Presets": [
+    {
+      "type": "center_crack",
+      "label": "left_notch",
+      "center": [0.075, 0.075, 0.0045],
+      "normal": [1.0, 0.0, 0.0],
+      "length": 0.05,
+      "width": 0.009
+    },
+    {
+      "type": "edge_crack",
+      "side": "left",
+      "position": 0.05,
+      "length": 0.02
+    }
+  ]
+}
+```
+
+- `center_crack` takes `center` (or `center_x`/`center_y`/`center_z`) and
+  `length`, plus an optional `angle_degrees` or `angle_radians`.
+- `edge_crack` starts on the `left`, `right`, `bottom` or `top` wall of the mesh
+  bounding box at `position` and grows inward by `length`, unless an angle is
+  given.
+- On a 2D mesh a preset resolves to a line segment. On a 3D mesh it resolves to
+  a bounded planar quadrilateral: with no orientation fields the 2D segment is
+  extruded through the full thickness, while `normal` (and optionally `axis` and
+  `width`) builds a general oriented rectangle. `examples/kalthoff_winkler_3D.json`
+  uses the oriented form for the two Kalthoff-Winkler notches.
+
+`Cracks` and `Presets` may be combined; at least one of them must be present.
+
 ## Performance guidance
 
 - Configure `Release`; debug builds are useful for checking but substantially
