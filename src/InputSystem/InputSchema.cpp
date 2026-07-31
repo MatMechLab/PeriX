@@ -906,7 +906,7 @@ bool validateLinearSolver(const Json &block,std::string &error) {
         }
     }
     else if (type=="amgcl") {
-        if (!allowedKeys(params,{"tol","maxiter","verbose"},
+        if (!allowedKeys(params,{"tol","maxiter","verbose","iluk_level"},
                          "LinearSolver.params",error)) return false;
         if (params.contains("tol")) {
             double tolerance=0.0;
@@ -920,6 +920,10 @@ bool validateLinearSolver(const Json &block,std::string &error) {
             constexpr auto maximum=static_cast<std::uint64_t>(
                 std::numeric_limits<int>::max());
             if (!requireInteger(params,"maxiter",1,maximum,
+                                "LinearSolver.params",error)) return false;
+        }
+        if (params.contains("iluk_level")) {
+            if (!requireInteger(params,"iluk_level",1,6,
                                 "LinearSolver.params",error)) return false;
         }
         if (!optionalBoolean(params,"verbose","LinearSolver.params",error)) {
