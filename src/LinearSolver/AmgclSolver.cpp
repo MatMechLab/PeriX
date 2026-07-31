@@ -9,8 +9,9 @@
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //+++ Author  : Yang Bai
 //+++ Date    : 2026.07.30
-//+++ Function: Minimal public AMGCL backend. Uses BiCGSTAB with
-//+++           smoothed-aggregation AMG and ILU(0), automatically
+//+++ Function: Minimal public AMGCL backend. Uses BiCGSTAB and
+//+++           escalates the preconditioner automatically
+//+++           (smoothed-aggregation AMG/ILU(0) -> ILU(0) -> ILU(k)),
 //+++           detects node blocks, reuses the preconditioner, and
 //+++           accepts a solve only after checking the true residual.
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -37,16 +38,24 @@
 #include <amgcl/make_solver.hpp>
 #include <amgcl/relaxation/as_preconditioner.hpp>
 #include <amgcl/relaxation/ilu0.hpp>
+#include <amgcl/relaxation/iluk.hpp>
 #include <amgcl/solver/bicgstab.hpp>
 
 #include "Utils/MessagePrinter.h"
 
 namespace {
 
+/** Preconditioner rungs of the automatic fallback ladder, from cheapest to
+ *  strongest. ILU(0) is provably too weak for the dense, non-symmetric,
+ *  non-M-matrix PDDO stencil (its incomplete factor can even be exactly
+ *  singular there), so a level-of-fill ILU is kept in reserve. */
+enum class PrecondKind { AmgIlu0, Ilu0, Iluk };
+
 struct Options {
     double Tol=1.0e-10;
     int MaxIters=200;
     bool Verbose=false;
+    int IluLevel=2;
 };
 
 template <int B>
@@ -83,20 +92,25 @@ public:
         double &reportedResidual)=0;
 };
 
-template <int B,bool UseAmg>
+template <int B,PrecondKind P>
 class Runner final : public RunnerBase {
 public:
     using MatrixValue=typename BlockTraits<B>::MatrixValue;
     using Backend=typename BlockTraits<B>::Backend;
     using Preconditioner=std::conditional_t<
-        UseAmg,
+        P==PrecondKind::AmgIlu0,
         amgcl::amg<
             Backend,
             amgcl::coarsening::smoothed_aggregation,
             amgcl::relaxation::ilu0>,
-        amgcl::relaxation::as_preconditioner<
-            Backend,
-            amgcl::relaxation::ilu0>>;
+        std::conditional_t<
+            P==PrecondKind::Ilu0,
+            amgcl::relaxation::as_preconditioner<
+                Backend,
+                amgcl::relaxation::ilu0>,
+            amgcl::relaxation::as_preconditioner<
+                Backend,
+                amgcl::relaxation::iluk>>>;
     using IterativeSolver=amgcl::solver::bicgstab<Backend>;
     using Solver=amgcl::make_solver<Preconditioner,IterativeSolver>;
 
@@ -109,6 +123,9 @@ public:
         typename Solver::params parameters;
         parameters.solver.tol=options.Tol;
         parameters.solver.maxiter=static_cast<std::size_t>(options.MaxIters);
+        if constexpr (P==PrecondKind::Iluk) {
+            parameters.precond.k=options.IluLevel;
+        }
 
         auto matrix=std::tie(n,rows,cols,values);
         if constexpr (B==1) {
@@ -149,19 +166,26 @@ private:
 };
 
 template <int B>
-std::unique_ptr<RunnerBase> makeRunnerForBlock(const bool useAmg) {
-    if (useAmg) return std::make_unique<Runner<B,true>>();
-    return std::make_unique<Runner<B,false>>();
+std::unique_ptr<RunnerBase> makeRunnerForBlock(const PrecondKind precond) {
+    switch (precond) {
+        case PrecondKind::AmgIlu0:
+            return std::make_unique<Runner<B,PrecondKind::AmgIlu0>>();
+        case PrecondKind::Ilu0:
+            return std::make_unique<Runner<B,PrecondKind::Ilu0>>();
+        case PrecondKind::Iluk:
+            return std::make_unique<Runner<B,PrecondKind::Iluk>>();
+    }
+    return nullptr;
 }
 
 std::unique_ptr<RunnerBase> makeRunner(
-    const int blockSize,const bool useAmg) {
+    const int blockSize,const PrecondKind precond) {
     switch (blockSize) {
-        case 1: return makeRunnerForBlock<1>(useAmg);
-        case 2: return makeRunnerForBlock<2>(useAmg);
-        case 3: return makeRunnerForBlock<3>(useAmg);
-        case 4: return makeRunnerForBlock<4>(useAmg);
-        case 5: return makeRunnerForBlock<5>(useAmg);
+        case 1: return makeRunnerForBlock<1>(precond);
+        case 2: return makeRunnerForBlock<2>(precond);
+        case 3: return makeRunnerForBlock<3>(precond);
+        case 4: return makeRunnerForBlock<4>(precond);
+        case 5: return makeRunnerForBlock<5>(precond);
         default: return nullptr;
     }
 }
@@ -181,8 +205,7 @@ struct AmgclSolver::Impl {
 
     int BlockSize=1;
     bool HavePreconditioner=false;
-    bool UseAmg=true;
-    bool FellBackToIlu0=false;
+    PrecondKind Precond=PrecondKind::AmgIlu0;
 };
 
 AmgclSolver::AmgclSolver()=default;
@@ -271,6 +294,8 @@ void AmgclSolver::initSolver(
         Parameters.value("maxiter",200);
     implementation.SolverOptions.Verbose=
         Parameters.value("verbose",false);
+    implementation.SolverOptions.IluLevel=
+        Parameters.value("iluk_level",2);
 
     if (!(implementation.SolverOptions.Tol>0.0)
         || !std::isfinite(implementation.SolverOptions.Tol)) {
@@ -281,6 +306,12 @@ void AmgclSolver::initSolver(
     if (implementation.SolverOptions.MaxIters<1) {
         MessagePrinter::printErrorTxt(
             "AmgclSolver parameter 'maxiter' must be at least one");
+        MessagePrinter::exitPeriX();
+    }
+    if (implementation.SolverOptions.IluLevel<1
+        || implementation.SolverOptions.IluLevel>6) {
+        MessagePrinter::printErrorTxt(
+            "AmgclSolver parameter 'iluk_level' must be between 1 and 6");
         MessagePrinter::exitPeriX();
     }
 
@@ -294,8 +325,9 @@ void AmgclSolver::initSolver(
     implementation.Solution.resize(static_cast<std::size_t>(m_N));
 
     implementation.BlockSize=detectBlockSize(K);
+    implementation.Precond=PrecondKind::AmgIlu0;
     implementation.ActiveRunner=
-        makeRunner(implementation.BlockSize,true);
+        makeRunner(implementation.BlockSize,implementation.Precond);
     if (!implementation.ActiveRunner) {
         MessagePrinter::printErrorTxt(
             "AmgclSolver failed to create its fixed public solver configuration");
@@ -426,26 +458,45 @@ bool AmgclSolver::solveLinearSystem(
         trueResidual=runOnce(true);
     }
 
-    if (trueResidual>implementation.SolverOptions.Tol
-        && implementation.UseAmg
-        && !implementation.FellBackToIlu0) {
-        MessagePrinter::printWarningTxt(
-            "AMGCL multigrid did not reach the requested true residual; "
-            "retrying with the fixed single-level ILU(0) fallback");
-        implementation.UseAmg=false;
-        implementation.FellBackToIlu0=true;
-        implementation.ActiveRunner=
-            makeRunner(implementation.BlockSize,false);
+    // Escalate the preconditioner rather than give up: the PDDO stencil is
+    // dense and non-symmetric, and the aggregation hierarchy (or a zero-fill
+    // ILU) can simply be too weak for it. Each rung is only ever built once
+    // the cheaper one has been shown to fail on this very matrix.
+    while (trueResidual>implementation.SolverOptions.Tol
+           && implementation.Precond!=PrecondKind::Iluk) {
+        std::string nextName;
+        if (implementation.Precond==PrecondKind::AmgIlu0) {
+            implementation.Precond=PrecondKind::Ilu0;
+            nextName="single-level ILU(0)";
+        }
+        else {
+            implementation.Precond=PrecondKind::Iluk;
+            nextName="ILU("
+                +std::to_string(implementation.SolverOptions.IluLevel)+")";
+        }
+        char notice[256];
+        std::snprintf(
+            notice,sizeof(notice),
+            "AMGCL did not reach the requested true residual (%9.3e); "
+            "retrying with the %s preconditioner",
+            trueResidual,nextName.c_str());
+        MessagePrinter::printWarningTxt(notice);
+
+        auto next=makeRunner(implementation.BlockSize,implementation.Precond);
+        if (!next) break;
+        implementation.ActiveRunner=std::move(next);
         implementation.HavePreconditioner=false;
         trueResidual=runOnce(true);
     }
 
     if (trueResidual>implementation.SolverOptions.Tol) {
-        char message[224];
+        char message[320];
         std::snprintf(
             message,sizeof(message),
             "AMGCL did not reach the requested true relative residual "
-            "(%9.3e > %9.3e after at most %d iterations)",
+            "(%9.3e > %9.3e after at most %d iterations, preconditioner "
+            "ladder exhausted); raise 'maxiter'/'iluk_level' or check that "
+            "every boundary ghost row carries a boundary condition",
             trueResidual,implementation.SolverOptions.Tol,
             implementation.SolverOptions.MaxIters);
         MessagePrinter::printWarningTxt(message);
