@@ -163,12 +163,13 @@ The public AMGCL configuration is intentionally narrow:
     "tol": 1.0e-10,
     "maxiter": 200,
     "verbose": false,
-    "iluk_level": 2
+    "iluk_level": 2,
+    "solver_threads": 0
   }
 }
 ```
 
-These four keys are the only accepted AMGCL parameters. Internally, PeriX uses
+These five keys are the only accepted AMGCL parameters. Internally, PeriX uses
 BiCGSTAB, detects a node block size from one to five, and reuses the
 preconditioner. If the recomputed true residual misses the requested tolerance,
 it rebuilds once and then escalates the preconditioner along a fixed ladder:
@@ -183,6 +184,15 @@ exactly singular, while ILU(k>=1) converges. Each rung is built only after the
 cheaper one has been shown to fail on that very matrix, so well-conditioned
 problems pay nothing. A solve succeeds only when
 \(\lVert b-Ax\rVert_2/\lVert b\rVert_2\leq\texttt{tol}\).
+
+`solver_threads` sizes the OpenMP team used for the AMGCL solve alone; `0` (the
+default) derives it from the row count, allowing one thread per 20000 rows up to
+eight. AMGCL's builtin backend opens a fresh parallel region for every sparse
+kernel, so on a many-core node the barrier latency swamps the arithmetic long
+before the cores are saturated: on a 96-core machine the 200x200 Poisson deck
+takes 172 s on the default 96-wide team and 1.6 s once the team is sized to the
+work. Set the key explicitly only to override that heuristic; it never changes
+the assembly team, which always follows `OMP_NUM_THREADS`.
 
 PARDISO and AMGCL may be enabled in the same CPU build.
 
