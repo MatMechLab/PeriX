@@ -181,6 +181,13 @@ int main(int argc,char *argv[]) {
     expectRejected("unsupported AMGCL tuning",changed);
 
     changed["LinearSolver"]["params"].erase("unsupported_option");
+    changed["LinearSolver"]["params"]["iluk_level"]=3;
+    expectAccepted("AMGCL ILU(k) level",changed);
+
+    changed["LinearSolver"]["params"]["iluk_level"]=0;
+    expectRejected("out-of-range AMGCL ILU(k) level",changed);
+
+    changed["LinearSolver"]["params"].erase("iluk_level");
     changed["LinearSolver"]["params"]["tol"]=0.0;
     expectRejected("nonpositive AMGCL tolerance",changed);
 
