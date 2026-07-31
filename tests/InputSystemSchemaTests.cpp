@@ -188,6 +188,16 @@ int main(int argc,char *argv[]) {
     expectRejected("out-of-range AMGCL ILU(k) level",changed);
 
     changed["LinearSolver"]["params"].erase("iluk_level");
+    changed["LinearSolver"]["params"]["solver_threads"]=4;
+    expectAccepted("explicit AMGCL solver thread team",changed);
+
+    changed["LinearSolver"]["params"]["solver_threads"]=0;
+    expectAccepted("automatic AMGCL solver thread team",changed);
+
+    changed["LinearSolver"]["params"]["solver_threads"]=-1;
+    expectRejected("negative AMGCL solver thread team",changed);
+
+    changed["LinearSolver"]["params"].erase("solver_threads");
     changed["LinearSolver"]["params"]["tol"]=0.0;
     expectRejected("nonpositive AMGCL tolerance",changed);
 
