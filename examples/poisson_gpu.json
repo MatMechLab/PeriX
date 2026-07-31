@@ -41,6 +41,22 @@
 				"u"
 			],
 			"value": 1.0
+		},
+		"bottom": {
+			"type": "neumann",
+			"phygroup": "bottomnodes_ghost",
+			"dofs": [
+				"u"
+			],
+			"value": 0.0
+		},
+		"top": {
+			"type": "neumann",
+			"phygroup": "topnodes_ghost",
+			"dofs": [
+				"u"
+			],
+			"value": 0.0
 		}
 	},
 	"JobSystem": {
