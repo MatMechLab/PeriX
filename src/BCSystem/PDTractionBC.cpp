@@ -187,6 +187,34 @@ void PDTractionBC::setElastic(const double E,const double nu,
     m_ElasticConfigured=true;
 }
 
+void PDTractionBC::presetControlledRows(const PDMesh &Mesh,
+                                        const std::vector<int> &NodeIDs,
+                                        const int &DofsPerNode,
+                                        std::vector<char> &mask) const {
+    // The strong traction rows are written for the displacement slots only.
+    // An explicit slot list already fixes them; an empty list is only legal
+    // when the field is pure mechanics, i.e. every slot is a displacement.
+    std::vector<int> displacement=m_DisplacementComponents;
+    if (displacement.empty()) {
+        displacement.resize(static_cast<std::size_t>(DofsPerNode));
+        for (int a=0;a<DofsPerNode;++a) {
+            displacement[static_cast<std::size_t>(a)]=a+1;
+        }
+    }
+    validateComponents(displacement,DofsPerNode);
+
+    const auto &mirror=Mesh.getDataConstRef().GhostMirrorBulkID;
+    if (static_cast<int>(mirror.size())<Mesh.getNodesNum()) return;
+
+    for (const int ghost : resolveBoundaryGhosts(Mesh,NodeIDs)) {
+        const std::size_t base=static_cast<std::size_t>(ghost-1)
+                             *static_cast<std::size_t>(DofsPerNode);
+        for (const int component : displacement) {
+            mask[base+static_cast<std::size_t>(component-1)]=1;
+        }
+    }
+}
+
 void PDTractionBC::applyWithOperators(
     const PDMesh &Mesh,PDOperators &Operators,
     const std::vector<int> &NodeIDs,const int &DofsPerNode,
