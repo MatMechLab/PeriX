@@ -15,6 +15,7 @@
 #include "ElmtSystem/FracStressCahnHilliardElement.h"
 #include "ElmtSystem/PDDODynamicFracElement.h"
 #include "ElmtSystem/PoissonElement.h"
+#include "ElmtSystem/StressCahnHilliardElement.h"
 
 bool InputSystem::readElmtSystemBlock(const nlohmann::ordered_json &json,
                                       ElmtSystem &elements,
@@ -70,6 +71,23 @@ bool InputSystem::readElmtSystemBlock(const nlohmann::ordered_json &json,
                 params.at("state").get<std::string>()=="plane_stress"
                     ? ExplicitPDDOFracElement::StressState::PlaneStress
                     : ExplicitPDDOFracElement::StressState::PlaneStrain);
+        }
+        element=std::move(built);
+    }
+    else if (type=="stress_cahnhilliard") {
+        auto built=std::make_unique<StressCahnHilliardElement>();
+        built->setE(params.at("E").get<double>());
+        built->setNu(params.at("nu").get<double>());
+        built->setDiffusivity(params.at("D").get<double>());
+        built->setOmega(params.at("Omega").get<double>());
+        built->setCref(params.at("cref").get<double>());
+        built->setChi(params.at("chi").get<double>());
+        built->setKappa(params.at("kappa").get<double>());
+        if (meshDim==2) {
+            built->setState(
+                params.at("state").get<std::string>()=="plane_stress"
+                    ? StressCahnHilliardElement::StressState::PlaneStress
+                    : StressCahnHilliardElement::StressState::PlaneStrain);
         }
         element=std::move(built);
     }
