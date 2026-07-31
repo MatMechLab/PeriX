@@ -29,6 +29,10 @@
 #include <type_traits>
 #include <vector>
 
+#ifdef _OPENMP
+#include <omp.h>   // omp_set_num_threads for the scoped AMGCL solver team
+#endif
+
 #include <amgcl/backend/builtin.hpp>
 #include <amgcl/value_type/static_matrix.hpp>
 #include <amgcl/adapter/block_matrix.hpp>
@@ -56,6 +60,62 @@ struct Options {
     int MaxIters=200;
     bool Verbose=false;
     int IluLevel=2;
+    int Threads=0;
+};
+
+/** AMGCL's builtin backend splits every sparse kernel into a fresh OpenMP
+ *  region, so a Krylov solve issues thousands of barriers over comparatively
+ *  little work per row. On a many-core node the barrier latency then dwarfs the
+ *  arithmetic: on a 96-core machine the 200x200 Poisson deck takes 2.0 s on 4
+ *  threads but 172 s on the default 96, and forcing OMP_WAIT_POLICY=passive
+ *  only trades the spin for wake-up latency (115 s). Sizing the team by the
+ *  work actually available keeps the backend on the flat part of that curve
+ *  (643k rows: 40.6 s on 8 threads vs 104.6 s serial). */
+constexpr int kMinRowsPerSolverThread=20000;
+constexpr int kMaxSolverThreads=8;
+
+/** Applies the AMGCL thread team for one solve and puts the ambient OpenMP
+ *  width back afterwards. PeriX otherwise never calls omp_set_num_threads --
+ *  the assembly loops must keep running on the user's OMP_NUM_THREADS team --
+ *  so the override has to be strictly scoped to the linear solve. */
+class SolverThreadTeam {
+public:
+    SolverThreadTeam(const std::ptrdiff_t rows,const int requested) {
+#ifdef _OPENMP
+        m_Ambient=omp_get_max_threads();
+        if (m_Ambient<=1) return;
+
+        int team=requested;
+        if (team<=0) {
+            const std::ptrdiff_t byWork=
+                rows/static_cast<std::ptrdiff_t>(kMinRowsPerSolverThread);
+            team=static_cast<int>(
+                std::min<std::ptrdiff_t>(byWork,kMaxSolverThreads));
+            if (team<1) team=1;
+        }
+        team=std::min(team,m_Ambient);
+        if (team==m_Ambient) return;
+
+        omp_set_num_threads(team);
+        m_Restore=true;
+#else
+        (void)rows;
+        (void)requested;
+#endif
+    }
+
+    ~SolverThreadTeam() {
+#ifdef _OPENMP
+        if (m_Restore) omp_set_num_threads(m_Ambient);
+#endif
+    }
+
+    SolverThreadTeam(const SolverThreadTeam &)=delete;
+    SolverThreadTeam &operator=(const SolverThreadTeam &)=delete;
+
+private:
+    int m_Ambient=1;
+    bool m_Restore=false;
 };
 
 template <int B>
@@ -296,6 +356,8 @@ void AmgclSolver::initSolver(
         Parameters.value("verbose",false);
     implementation.SolverOptions.IluLevel=
         Parameters.value("iluk_level",2);
+    implementation.SolverOptions.Threads=
+        Parameters.value("solver_threads",0);
 
     if (!(implementation.SolverOptions.Tol>0.0)
         || !std::isfinite(implementation.SolverOptions.Tol)) {
@@ -312,6 +374,11 @@ void AmgclSolver::initSolver(
         || implementation.SolverOptions.IluLevel>6) {
         MessagePrinter::printErrorTxt(
             "AmgclSolver parameter 'iluk_level' must be between 1 and 6");
+        MessagePrinter::exitPeriX();
+    }
+    if (implementation.SolverOptions.Threads<0) {
+        MessagePrinter::printErrorTxt(
+            "AmgclSolver parameter 'solver_threads' must be zero (auto) or positive");
         MessagePrinter::exitPeriX();
     }
 
@@ -360,6 +427,8 @@ bool AmgclSolver::solveLinearSystem(
     if (x.getSize()!=m_N) x.resize(m_N);
 
     auto &implementation=*m_Impl;
+    const SolverThreadTeam solverThreads(
+        m_N,implementation.SolverOptions.Threads);
     const double *matrixValues=A.getCSRValuesPtr();
     const double *rhsValues=b.getDataPtr();
     double *solutionValues=x.getDataPtr();
