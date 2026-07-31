@@ -58,6 +58,7 @@ set(PERIX_CORE_SOURCES
     src/Mesh/SaveMesh.cpp
 
     src/MeshModify/MeshModify.cpp
+    src/MeshModify/MeshModifyPresets.cpp
     src/NonlinearSolver/NonlinearSolver.cpp
 
     src/OutputSystem/ExodusWriter.cpp
