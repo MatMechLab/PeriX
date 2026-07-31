@@ -162,16 +162,26 @@ The public AMGCL configuration is intentionally narrow:
   "params": {
     "tol": 1.0e-10,
     "maxiter": 200,
-    "verbose": false
+    "verbose": false,
+    "iluk_level": 2
   }
 }
 ```
 
-These three keys are the only accepted AMGCL parameters. Internally, PeriX
-uses BiCGSTAB with smoothed-aggregation AMG and ILU(0) relaxation, detects a
-node block size from one to five, and reuses the preconditioner. If the
-recomputed true residual misses the requested tolerance, it rebuilds once and
-then uses a fixed single-level ILU(0) fallback. A solve succeeds only when
+These four keys are the only accepted AMGCL parameters. Internally, PeriX uses
+BiCGSTAB, detects a node block size from one to five, and reuses the
+preconditioner. If the recomputed true residual misses the requested tolerance,
+it rebuilds once and then escalates the preconditioner along a fixed ladder:
+
+1. smoothed-aggregation AMG with ILU(0) relaxation (the default),
+2. single-level ILU(0),
+3. single-level ILU(k), with `iluk_level` (default 2, range 1-6) levels of fill.
+
+The escalation matters because the PDDO stencil is dense, non-symmetric and not
+an M-matrix: a zero-fill incomplete factorization of it can stagnate or even be
+exactly singular, while ILU(k>=1) converges. Each rung is built only after the
+cheaper one has been shown to fail on that very matrix, so well-conditioned
+problems pay nothing. A solve succeeds only when
 \(\lVert b-Ax\rVert_2/\lVert b\rVert_2\leq\texttt{tol}\).
 
 PARDISO and AMGCL may be enabled in the same CPU build.
