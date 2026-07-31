@@ -29,6 +29,7 @@ function(perix_register_tests core_target executable_target)
     set(_perix_public_decks
         diffusion.json
         kalthoff_winkler.json
+        kalthoff_winkler_3D.json
         kalthoff_winkler_gpu.json
         poisson.json
         poisson_amgcl.json
