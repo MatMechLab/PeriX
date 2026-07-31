@@ -329,6 +329,14 @@ Gaussian, cosine, and seeded random. Explicit dynamics additionally accepts an
 initial velocity field. Random initial data must include a seed so manuscript
 runs remain reproducible.
 
+Give **every** boundary-ghost row a boundary condition, including the walls that
+carry no load. A ghost wall left free keeps a one-sided PD equation instead of a
+boundary equation, which makes the Jacobian nearly rank deficient and steadily
+worse as the mesh is refined. Stating the natural condition explicitly (a zero
+`neumann` or `pdtraction` BC on the free walls) does not change the physics; it
+is what makes an iterative solve converge and a direct solve reproducible. PeriX
+prints a warning at startup naming any ghost group and DoF slot left uncovered.
+
 ## Performance guidance
 
 - Configure `Release`; debug builds are useful for checking but substantially
