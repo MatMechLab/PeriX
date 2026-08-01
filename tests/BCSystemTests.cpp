@@ -191,6 +191,60 @@ void testDirichletReflectionAndDirect() {
     expectNear("Dirichlet direct RHS",rhs(2),8.0);
 }
 
+void testDirichletVelocityBoxAndBulkPin() {
+    PDMesh mesh=makeMirrorMesh();
+    SparseMatrix matrix;
+    matrix.initFromPDMesh(mesh.getDataConstRef(),1);
+    VectorXd rhs(2,0.0);
+    VectorXd solution(2,0.0);
+
+    // g(t)=value+velocity*t ramps the reflected wall value in time.
+    DirichletBC ramped(2.0);
+    ramped.setVelocity({3.0});
+    solution(1)=1.0;
+    ramped.presetSolutionAtTime(mesh,{2},1,solution,0.5);
+    expectNear("Dirichlet ramped preset",solution(2),6.0);
+
+    solution(2)=5.0;
+    seedDiagonal(matrix,4.0);
+    ramped.applyAtTime(mesh,{2},1,solution,matrix,rhs,0.5);
+    expectNear("Dirichlet ramped bulk coefficient",
+               matrixValue(matrix,2,1),4.0);
+    expectNear("Dirichlet ramped RHS",rhs(2),4.0);
+
+    // At t=0 the ramp reduces to the plain value.
+    solution(1)=1.0;
+    ramped.presetSolution(mesh,{2},1,solution);
+    expectNear("Dirichlet ramp at rest",solution(2),3.0);
+
+    // A listed bulk node has no mirror ghost and is pinned directly.
+    DirichletBC pin(3.0);
+    solution(1)=1.0;
+    pin.presetSolution(mesh,{1},1,solution);
+    expectNear("Dirichlet bulk preset pins directly",solution(1),3.0);
+
+    rhs.setToZeros();
+    seedDiagonal(matrix,4.0);
+    solution(1)=1.0;
+    pin.apply(mesh,{1},1,solution,matrix,rhs);
+    expectNear("Dirichlet bulk pin off-diagonal",
+               matrixValue(matrix,1,2),0.0);
+    expectNear("Dirichlet bulk pin RHS",rhs(1),8.0);
+
+    // The coordinate box restricts the condition to the covered nodes.
+    DirichletBC boxed(9.0);
+    boxed.setBox({0.5,1.5,-1.0,1.0,1.0,-1.0});
+    solution(1)=1.0;
+    solution(2)=0.0;
+    boxed.presetSolution(mesh,{1,2},1,solution);
+    expectNear("Dirichlet box skips outside node",solution(1),1.0);
+    expectNear("Dirichlet box reflects inside node",solution(2),17.0);
+
+    std::vector<char> mask(2,0);
+    boxed.presetControlledRows(mesh,{1,2},1,mask);
+    expectTrue("Dirichlet box mask",mask[0]==0 && mask[1]==1);
+}
+
 void testHomogeneousMirror() {
     PDMesh mesh=makeMirrorMesh();
     SparseMatrix matrix;
@@ -355,6 +409,7 @@ void testRegistryAndDispatch() {
 
 int main() {
     testDirichletReflectionAndDirect();
+    testDirichletVelocityBoxAndBulkPin();
     testHomogeneousMirror();
     testSpeciesFluxSourceAndLayerSelection();
     testStrongMechanicalTraction();
