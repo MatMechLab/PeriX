@@ -218,7 +218,9 @@ void PDTractionBC::presetControlledRows(const PDMesh &Mesh,
 void PDTractionBC::applyWithOperators(
     const PDMesh &Mesh,PDOperators &Operators,
     const std::vector<int> &NodeIDs,const int &DofsPerNode,
-    const VectorXd &U,SparseMatrix &K,VectorXd &RHS) const {
+    const VectorXd &U,SparseMatrix &K,VectorXd &RHS,
+    const double &time) const {
+    (void)time;
     if (!m_ElasticConfigured) {
         MessagePrinter::printErrorTxt(
             "PDTractionBC: elastic constants were not configured");

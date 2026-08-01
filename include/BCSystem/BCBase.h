@@ -62,6 +62,20 @@ public:
                                 VectorXd &U) const=0;
 
     /**
+     * Time-aware preset used by the transient drivers. A time-dependent
+     * condition (the velocity-ramped Dirichlet hold) overrides this; the
+     * default forwards to the time-independent preset.
+     */
+    virtual void presetSolutionAtTime(const PDMesh &Mesh,
+                                      const std::vector<int> &NodeIDs,
+                                      const int &DofsPerNode,
+                                      VectorXd &U,
+                                      const double &time) const {
+        (void)time;
+        presetSolution(Mesh,NodeIDs,DofsPerNode,U);
+    }
+
+    /**
      * Mark rows written by presetSolution. The ADR driver excludes these rows
      * from its free-degree-of-freedom damping estimate.
      */
@@ -86,6 +100,23 @@ public:
                        VectorXd &RHS) const=0;
 
     /**
+     * Time-aware row constraint. The imposed value must agree with
+     * presetSolutionAtTime at the same time, otherwise the Newton increment
+     * fights the preset ramp. The default forwards to the time-independent
+     * apply.
+     */
+    virtual void applyAtTime(const PDMesh &Mesh,
+                             const std::vector<int> &NodeIDs,
+                             const int &DofsPerNode,
+                             const VectorXd &U,
+                             SparseMatrix &K,
+                             VectorXd &RHS,
+                             const double &time) const {
+        (void)time;
+        apply(Mesh,NodeIDs,DofsPerNode,U,K,RHS);
+    }
+
+    /**
      * Operator-aware form used by strong PDDO natural conditions. Conditions
      * that do not need differential operators use the default forwarding
      * implementation.
@@ -96,8 +127,9 @@ public:
                                     const int &DofsPerNode,
                                     const VectorXd &U,
                                     SparseMatrix &K,
-                                    VectorXd &RHS) const {
+                                    VectorXd &RHS,
+                                    const double &time) const {
         (void)Operators;
-        apply(Mesh,NodeIDs,DofsPerNode,U,K,RHS);
+        applyAtTime(Mesh,NodeIDs,DofsPerNode,U,K,RHS,time);
     }
 };

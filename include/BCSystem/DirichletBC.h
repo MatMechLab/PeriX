@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include <array>
+
 #include "BCSystem/BCBase.h"
 
 class DirichletBC final : public BCBase {
@@ -43,6 +45,35 @@ public:
     }
 
     /**
+     * Optional loading velocity per pinned DoF. When non-empty the
+     * prescribed value ramps in time: g(t) = value + velocity * t.
+     * Used for constant-velocity loading (e.g. the Kalthoff--Winkler
+     * impactor). The count must be 1 (broadcast) or equal to the number
+     * of pinned DoFs, exactly like the value list. Empty (default) means
+     * a time-independent value.
+     */
+    void setVelocity(const std::vector<double> &velocity) {
+        m_Velocity=velocity;
+    }
+    [[nodiscard]] const std::vector<double>& getVelocity() const {
+        return m_Velocity;
+    }
+
+    /**
+     * Optional axis-aligned coordinate box that restricts this BC to the
+     * subset of the bound physical group whose PD-node coordinates lie
+     * inside it. Each axis is an independent [min,max] window; an inactive
+     * axis (min>max) is unconstrained. This is how a load is applied to a
+     * portion of a boundary edge or a pin to the middle of a body.
+     * Inactive by default (whole group).
+     */
+    void setBox(const std::array<double,6> &box) {
+        m_Box=box;
+        m_HasBox=true;
+    }
+    [[nodiscard]] bool hasBox() const { return m_HasBox; }
+
+    /**
      * false (default): u_ghost + u_bulk = 2*g at the wall midpoint.
      * true:            u_ghost = g.
      */
@@ -53,6 +84,12 @@ public:
                         const std::vector<int> &NodeIDs,
                         const int &DofsPerNode,
                         VectorXd &U) const override;
+
+    void presetSolutionAtTime(const PDMesh &Mesh,
+                              const std::vector<int> &NodeIDs,
+                              const int &DofsPerNode,
+                              VectorXd &U,
+                              const double &time) const override;
 
     void presetControlledRows(const PDMesh &Mesh,
                               const std::vector<int> &NodeIDs,
@@ -66,8 +103,27 @@ public:
                SparseMatrix &K,
                VectorXd &RHS) const override;
 
+    void applyAtTime(const PDMesh &Mesh,
+                     const std::vector<int> &NodeIDs,
+                     const int &DofsPerNode,
+                     const VectorXd &U,
+                     SparseMatrix &K,
+                     VectorXd &RHS,
+                     const double &time) const override;
+
 private:
+    /** True iff PD node NodeID (one-based) lies inside the active box. */
+    [[nodiscard]] bool insideBox(const PDMesh &Mesh,const int NodeID) const;
+
+    /** One-time diagnostic for a box selection that matches no group node. */
+    void warnEmptySelection(const int matched,
+                            const std::vector<int> &NodeIDs) const;
+
     std::vector<double> m_Values{0.0};
+    std::vector<double> m_Velocity;
     std::vector<int> m_Components;
+    std::array<double,6> m_Box{1.0,-1.0,1.0,-1.0,1.0,-1.0};
+    bool m_HasBox=false;
     bool m_Direct=false;
+    mutable bool m_SelectionWarned=false;
 };

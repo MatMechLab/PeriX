@@ -263,7 +263,7 @@ void testStrongMechanicalTraction() {
         E,nu,PDTractionBC::StressState::PlaneStress,
         {sigmaXX,0.0,0.0});
     traction.applyWithOperators(
-        mesh,operators,{1},2,solution,matrix,rhs);
+        mesh,operators,{1},2,solution,matrix,rhs,0.0);
 
     expectNear("Strong traction bulk-group ux residual",rhs(7),0.0,1.0e-10);
     expectNear("Strong traction bulk-group uy residual",rhs(8),0.0,1.0e-10);
@@ -298,7 +298,7 @@ void testChemicalEigenstressTraction() {
     traction.setDisplacementComponents({3,4});
     traction.setChemicalExpansion(Omega,cref,1);
     traction.applyWithOperators(
-        mesh,operators,{4},4,solution,matrix,rhs);
+        mesh,operators,{4},4,solution,matrix,rhs,0.0);
 
     const int uxRow=(4-1)*4+3;
     const int uyRow=(4-1)*4+4;

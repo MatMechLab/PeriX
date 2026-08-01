@@ -106,7 +106,8 @@ public:
                             const int &DofsPerNode,
                             const VectorXd &U,
                             SparseMatrix &K,
-                            VectorXd &RHS) const override;
+                            VectorXd &RHS,
+                            const double &time) const override;
 
 private:
     double m_E=0.0;

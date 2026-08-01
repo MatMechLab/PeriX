@@ -115,7 +115,6 @@ void BCSystem::presetSolution(const PDMesh &Mesh,
                               const int &DofsPerNode,
                               VectorXd &U,
                               const double &time) const {
-    (void)time;
     for (const auto &entry : m_BCs) {
         const auto &nodeIDs=Mesh.getNodeIDsViaPhyName(entry.PhyName);
         if (nodeIDs.empty()
@@ -125,7 +124,7 @@ void BCSystem::presetSolution(const PDMesh &Mesh,
                 +"' references empty physical group '"+entry.PhyName
                 +"' and is a no-op");
         }
-        entry.BC->presetSolution(Mesh,nodeIDs,DofsPerNode,U);
+        entry.BC->presetSolutionAtTime(Mesh,nodeIDs,DofsPerNode,U,time);
     }
 }
 
@@ -219,7 +218,6 @@ void BCSystem::applyBCs(const PDMesh &Mesh,
                         SparseMatrix &K,
                         VectorXd &RHS) const {
     (void)Uold;
-    (void)Info;
     for (const auto &entry : m_BCs) {
         const auto &nodeIDs=Mesh.getNodeIDsViaPhyName(entry.PhyName);
         if (nodeIDs.empty()
@@ -230,7 +228,7 @@ void BCSystem::applyBCs(const PDMesh &Mesh,
                 +"' and is a no-op");
         }
         entry.BC->applyWithOperators(
-            Mesh,Operators,nodeIDs,DofsPerNode,U,K,RHS);
+            Mesh,Operators,nodeIDs,DofsPerNode,U,K,RHS,Info.T);
     }
 }
 

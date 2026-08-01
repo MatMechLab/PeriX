@@ -9,11 +9,18 @@
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //+++ Author  : Yang Bai
 //+++ Date    : 2026.07.28
-//+++ Function: exact Dirichlet row replacement.
+//+++ Function: exact Dirichlet row replacement. The prescribed value
+//+++           is imposed at the wall by reflection across it,
+//+++           u_ghost = 2*g(t) - u_bulk; a node with no mirror bulk
+//+++           (or direct=true) is pinned directly, u = g(t). The
+//+++           value optionally ramps in time, g(t) = value +
+//+++           velocity*t, and an optional axis-aligned box restricts
+//+++           the condition to a subset of the bound group.
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 #include "BCSystem/DirichletBC.h"
 
+#include <cstdio>
 #include <unordered_set>
 
 #include "PDMesh/PDMesh.h"
@@ -69,49 +76,74 @@ void validateDefinition(const std::vector<int> &components,
     return values.size()==1 ? values.front() : values[index];
 }
 
-[[nodiscard]] int mirrorBulk(const PDMesh &Mesh,const int nodeID,
-                             const bool direct,const std::string &where) {
+void checkNodeRange(const PDMesh &Mesh,const int nodeID,
+                    const std::string &where) {
     if (nodeID<1 || nodeID>Mesh.getNodesNum()) {
         MessagePrinter::printErrorTxt(
             where+": node "+std::to_string(nodeID)+" is outside the PD mesh");
         MessagePrinter::exitPeriX();
     }
-    if (direct) return 0;
-
-    const auto &mirror=Mesh.getDataConstRef().GhostMirrorBulkID;
-    if (static_cast<int>(mirror.size())<Mesh.getNodesNum()
-        || mirror[static_cast<std::size_t>(nodeID-1)]<1) {
-        MessagePrinter::printErrorTxt(
-            where+": reflected Dirichlet data must act on ghost nodes with a "
-            "mirror bulk; use direct=true only when the listed node itself is "
-            "the prescribed boundary layer");
-        MessagePrinter::exitPeriX();
-    }
-    return mirror[static_cast<std::size_t>(nodeID-1)];
 }
+}
+
+bool DirichletBC::insideBox(const PDMesh &Mesh,const int NodeID) const {
+    for (int axis=0;axis<3;++axis) {
+        const double lo=m_Box[static_cast<std::size_t>(2*axis)];
+        const double hi=m_Box[static_cast<std::size_t>(2*axis+1)];
+        if (lo>hi) continue;
+        const double x=Mesh.getIthNodeJthCoord(NodeID,axis+1);
+        if (x<lo || x>hi) return false;
+    }
+    return true;
 }
 
 void DirichletBC::presetSolution(const PDMesh &Mesh,
                                  const std::vector<int> &NodeIDs,
                                  const int &DofsPerNode,
                                  VectorXd &U) const {
+    presetSolutionAtTime(Mesh,NodeIDs,DofsPerNode,U,0.0);
+}
+
+void DirichletBC::presetSolutionAtTime(const PDMesh &Mesh,
+                                       const std::vector<int> &NodeIDs,
+                                       const int &DofsPerNode,
+                                       VectorXd &U,
+                                       const double &time) const {
     const auto components=resolveComponents(m_Components,DofsPerNode);
     validateDefinition(components,m_Values,DofsPerNode,
                        "DirichletBC::presetSolution");
+    if (!m_Velocity.empty()) {
+        validateDefinition(components,m_Velocity,DofsPerNode,
+                           "DirichletBC::presetSolution(velocity)");
+    }
 
+    const auto &mirror=Mesh.getDataConstRef().GhostMirrorBulkID;
+    const bool haveMirror=
+        static_cast<int>(mirror.size())>=Mesh.getNodesNum();
+    int matched=0;
     for (const int nodeID : NodeIDs) {
-        const int bulkID=mirrorBulk(Mesh,nodeID,m_Direct,
-                                    "DirichletBC::presetSolution");
+        checkNodeRange(Mesh,nodeID,"DirichletBC::presetSolution");
+        if (m_HasBox && !insideBox(Mesh,nodeID)) continue;
+        ++matched;
         const int ghostBase=(nodeID-1)*DofsPerNode;
+        const int bulkID=haveMirror
+            ? mirror[static_cast<std::size_t>(nodeID-1)]
+            : 0;
         const int bulkBase=(bulkID-1)*DofsPerNode;
         for (std::size_t k=0;k<components.size();++k) {
             const int component=components[k];
-            const double value=selectedValue(m_Values,k);
-            U(ghostBase+component)=m_Direct
-                ? value
-                : 2.0*value-U(bulkBase+component);
+            // Ramped value g(t)=value+velocity*t (velocity 0 if not set).
+            const double value=selectedValue(m_Values,k)
+                +(m_Velocity.empty() ? 0.0 : selectedValue(m_Velocity,k))*time;
+            // Reflection: the midpoint of ghost and bulk lies on the wall, so
+            // the ghost is set so the wall value is exactly g(t). A direct
+            // pin (or a node with no mirror bulk) writes the value itself.
+            U(ghostBase+component)=(bulkID>=1 && !m_Direct)
+                ? 2.0*value-U(bulkBase+component)
+                : value;
         }
     }
+    warnEmptySelection(matched,NodeIDs);
 }
 
 void DirichletBC::presetControlledRows(const PDMesh &Mesh,
@@ -122,8 +154,8 @@ void DirichletBC::presetControlledRows(const PDMesh &Mesh,
     validateDefinition(components,m_Values,DofsPerNode,
                        "DirichletBC::presetControlledRows");
     for (const int nodeID : NodeIDs) {
-        (void)mirrorBulk(Mesh,nodeID,m_Direct,
-                         "DirichletBC::presetControlledRows");
+        checkNodeRange(Mesh,nodeID,"DirichletBC::presetControlledRows");
+        if (m_HasBox && !insideBox(Mesh,nodeID)) continue;
         const std::size_t base=static_cast<std::size_t>(nodeID-1)
                              *static_cast<std::size_t>(DofsPerNode);
         for (const int component : components) {
@@ -138,29 +170,81 @@ void DirichletBC::apply(const PDMesh &Mesh,
                         const VectorXd &U,
                         SparseMatrix &K,
                         VectorXd &RHS) const {
+    applyAtTime(Mesh,NodeIDs,DofsPerNode,U,K,RHS,0.0);
+}
+
+void DirichletBC::applyAtTime(const PDMesh &Mesh,
+                              const std::vector<int> &NodeIDs,
+                              const int &DofsPerNode,
+                              const VectorXd &U,
+                              SparseMatrix &K,
+                              VectorXd &RHS,
+                              const double &time) const {
     const auto components=resolveComponents(m_Components,DofsPerNode);
     validateDefinition(components,m_Values,DofsPerNode,"DirichletBC::apply");
+    if (!m_Velocity.empty()) {
+        validateDefinition(components,m_Velocity,DofsPerNode,
+                           "DirichletBC::apply(velocity)");
+    }
 
+    const auto &mirror=Mesh.getDataConstRef().GhostMirrorBulkID;
+    const bool haveMirror=
+        static_cast<int>(mirror.size())>=Mesh.getNodesNum();
+    int matched=0;
     for (const int nodeID : NodeIDs) {
-        const int bulkID=mirrorBulk(Mesh,nodeID,m_Direct,"DirichletBC::apply");
+        checkNodeRange(Mesh,nodeID,"DirichletBC::apply");
+        // Same node selection as presetSolutionAtTime: the box (if any)
+        // restricts which nodes of the group this BC acts on; the constraint
+        // must agree with the preset or the Newton increment fights it.
+        if (m_HasBox && !insideBox(Mesh,nodeID)) continue;
+        ++matched;
         const int ghostBase=(nodeID-1)*DofsPerNode;
+        const int bulkID=haveMirror
+            ? mirror[static_cast<std::size_t>(nodeID-1)]
+            : 0;
         const int bulkBase=(bulkID-1)*DofsPerNode;
         for (std::size_t k=0;k<components.size();++k) {
             const int component=components[k];
             const int ghostDof=ghostBase+component;
-            const double value=selectedValue(m_Values,k);
+            // Ramped value g(t)=value+velocity*t, identical to the preset.
+            const double value=selectedValue(m_Values,k)
+                +(m_Velocity.empty() ? 0.0 : selectedValue(m_Velocity,k))*time;
             const double scale=bcRowScale(K,ghostDof);
 
             K.zeroRowAndSetDiagonal(ghostDof,scale);
-            if (m_Direct) {
-                RHS.insertValue(ghostDof,scale*(value-U(ghostDof)));
-                continue;
+            if (bulkID>=1 && !m_Direct) {
+                // Reflection constraint U(g)+U(b)=2*g(t) (wall value = g(t)):
+                //   row g -> s*(dU(g)+dU(b)) = s*(2*g(t) - U(g) - U(b)).
+                const int bulkDof=bulkBase+component;
+                K.insertValue(ghostDof,bulkDof,scale);
+                RHS.insertValue(
+                    ghostDof,scale*(2.0*value-U(ghostDof)-U(bulkDof)));
             }
-
-            const int bulkDof=bulkBase+component;
-            K.insertValue(ghostDof,bulkDof,scale);
-            RHS.insertValue(
-                ghostDof,scale*(2.0*value-U(ghostDof)-U(bulkDof)));
+            else {
+                // Direct pin (or a node with no mirror bulk): U -> g(t).
+                RHS.insertValue(ghostDof,scale*(value-U(ghostDof)));
+            }
         }
     }
+    warnEmptySelection(matched,NodeIDs);
+}
+
+void DirichletBC::warnEmptySelection(const int matched,
+                                     const std::vector<int> &NodeIDs) const {
+    // A box restriction that selects ZERO group nodes pins nothing -- the
+    // constraint is silently absent. For a rigid-body pin this leaves the
+    // matrix singular. A centroid-based PD mesh has no node at an exact
+    // location, so a too-small box catches nothing; warn ONCE.
+    if (m_SelectionWarned || matched>0 || !m_HasBox || NodeIDs.empty()) {
+        return;
+    }
+    m_SelectionWarned=true;
+    char buffer[320];
+    std::snprintf(buffer,sizeof(buffer),
+        "dirichlet box [%.4g,%.4g]x[%.4g,%.4g]x[%.4g,%.4g] selected 0 of %d group nodes "
+        "-- nothing constrained (a too-small box catches no cell centroid on a PD mesh). "
+        "Enlarge the box so it captures at least one node.",
+        m_Box[0],m_Box[1],m_Box[2],m_Box[3],m_Box[4],m_Box[5],
+        static_cast<int>(NodeIDs.size()));
+    MessagePrinter::printWarningTxt(buffer);
 }
