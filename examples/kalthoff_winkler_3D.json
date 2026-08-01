@@ -5,7 +5,7 @@
         "savemesh": false
     },
     "PDMesh": {
-        "HorizonRadiusFactor": 2.5,
+        "HorizonRadiusFactor": 3,
         "Order": 2
     },
     "MeshModify": {
@@ -14,7 +14,7 @@
         "Presets": [
             {
                 "type": "center_crack",
-                "label": "left_notch",
+                "label": "through_thickness_plane",
                 "center": [
                     0.075,
                     0.075,
@@ -22,7 +22,7 @@
                 ],
                 "normal": [
                     1.0,
-                    0.0,
+                    0,
                     0.0
                 ],
                 "length": 0.05,
@@ -30,7 +30,7 @@
             },
             {
                 "type": "center_crack",
-                "label": "right_notch",
+                "label": "through_thickness_plane",
                 "center": [
                     0.125,
                     0.075,
@@ -38,7 +38,7 @@
                 ],
                 "normal": [
                     1.0,
-                    0.0,
+                    0,
                     0.0
                 ],
                 "length": 0.05,
@@ -55,7 +55,7 @@
         "frac": {
             "type": "explicit_pddo_frac",
             "params": {
-                "E": 1.9e11,
+                "E": 190000000000.0,
                 "nu": 0.25,
                 "rho": 7800.0,
                 "Gc": 69000.0,
@@ -79,8 +79,8 @@
                 0.0
             ]
         },
-        "impacted_segment_free": {
-            "type": "neumann",
+        "impactor": {
+            "type": "dirichlet",
             "phygroup": "impactnodes_ghost",
             "dofs": [
                 "ux",
@@ -91,36 +91,21 @@
                 0.0,
                 0.0,
                 0.0
-            ]
-        }
-    },
-    "ICSystem": {
-        "impact_initial_velocity": {
-            "type": "box",
-            "field": "velocity",
-            "dofs": [
-                "ux",
-                "uy",
-                "uz"
             ],
-            "min_corner": [
-                0.075,
-                0.096969696969697,
-                -0.001
-            ],
-            "max_corner": [
-                0.125,
-                0.1,
-                0.01
-            ],
-            "inside_values": [
+            "velocity": [
                 0.0,
                 -22.0,
                 0.0
             ],
-            "outside_values": [
-                0.0,
-                0.0,
+            "direct": true
+        },
+        "fixed": {
+            "type": "dirichlet",
+            "phygroup": "alldomain",
+            "dofs": [
+                "uz"
+            ],
+            "value": [
                 0.0
             ]
         }
@@ -130,12 +115,12 @@
         "assemble": "openmp"
     },
     "TimeStepping": {
-        "dt": 1e-09,
+        "dt": 5e-08,
         "total_time": 0.0001,
         "verbose": true
     },
     "OutputSystem": {
-        "interval": 10000,
+        "interval": 100,
         "Fields": [
             "damage",
             "vonMises",

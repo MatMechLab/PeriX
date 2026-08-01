@@ -4,8 +4,8 @@
 		"dim": 2,
 		"xmax": 1.0,
 		"ymax": 1.0,
-		"nx": 100,
-		"ny": 100,
+		"nx": 50,
+		"ny": 50,
 		"meshtype": "quad4",
 		"savemesh": false
 	},
@@ -41,22 +41,6 @@
 				"u"
 			],
 			"value": 1.0
-		},
-		"bottom": {
-			"type": "neumann",
-			"phygroup": "bottomnodes_ghost",
-			"dofs": [
-				"u"
-			],
-			"value": 0.0
-		},
-		"top": {
-			"type": "neumann",
-			"phygroup": "topnodes_ghost",
-			"dofs": [
-				"u"
-			],
-			"value": 0.0
 		}
 	},
 	"JobSystem": {

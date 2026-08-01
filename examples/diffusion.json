@@ -60,21 +60,12 @@
 		}
 	},
 	"ICSystem": {
-		"bump": {
-			"type": "gaussian",
-			"dof": "c",
-			"center": [
-				0.5,
-				0.5
-			],
-			"sigma": [
-				0.1,
-				0.1
-			],
-			"amplitude": 1.0,
-			"offset": 0.2
-		}
-	},
+        "initial_concentration": {
+            "type": "constant",
+            "dof": "c",
+            "value": 0.00
+        }
+    },
 	"JobSystem": {
 		"type": "transient",
 		"assemble": "openmp"
