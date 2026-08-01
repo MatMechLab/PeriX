@@ -101,24 +101,64 @@ int main(int argc,char *argv[]) {
         ++failures;
     }
 
-    if (Json *diffusion=findWith(documents,"ICSystem","bump")) {
+    if (Json *diffusion=findWith(documents,"ICSystem","initial_concentration")) {
         changed=*diffusion;
         changed["BCSystem"]["left"]["value"]=1.0;
         expectRejected("nonzero generic Neumann",changed);
 
         changed=*diffusion;
         changed["BCSystem"]["bottom"]["velocity"]=1.0;
-        expectRejected("sustained boundary velocity",changed);
+        expectAccepted("velocity-ramped Dirichlet hold",changed);
+
+        changed=*diffusion;
+        changed["BCSystem"]["bottom"]["velocity"]="fast";
+        expectRejected("non-numeric boundary velocity",changed);
+
+        changed=*diffusion;
+        changed["BCSystem"]["bottom"]["velocity"]=Json::array({1.0,2.0});
+        expectRejected("mis-sized boundary velocity",changed);
+
+        changed=*diffusion;
+        changed["BCSystem"]["bottom"]["box"]={{"xmin",0.2},{"xmax",0.8}};
+        expectAccepted("box-restricted Dirichlet",changed);
+
+        changed=*diffusion;
+        changed["BCSystem"]["bottom"]["box"]={{"not_public",0.2}};
+        expectRejected("unknown box bound",changed);
+
+        changed=*diffusion;
+        changed["BCSystem"]["bottom"]["box"]=Json::array({0.2,0.8});
+        expectRejected("non-object box",changed);
     }
     else {
         std::printf("FAIL did not find diffusion example\n");
         ++failures;
     }
 
-    if (Json *impact=findWith(documents,"ICSystem","impact_initial_velocity")) {
+    Json *impact=nullptr;
+    for (auto &document:documents) {
+        if (document.contains("ElmtSystem")
+            && document.at("ElmtSystem").begin().value().value("type","")
+               =="explicit_pddo_frac") {
+            impact=&document;
+            break;
+        }
+    }
+    if (impact) {
         changed=*impact;
         changed["LinearSolver"]={{"type","default"}};
         expectRejected("solver on explicit run",changed);
+
+        changed=*impact;
+        Json &params=changed["ElmtSystem"].begin().value()["params"];
+        if (params.contains("G0")) {
+            params["Gc"]=params["G0"];
+            params.erase("G0");
+        }
+        expectAccepted("release rate under its standard name",changed);
+
+        changed["ElmtSystem"].begin().value()["params"]["G0"]=69000.0;
+        expectRejected("release rate given twice",changed);
     }
     else {
         std::printf("FAIL did not find impact example\n");
@@ -307,7 +347,7 @@ int main(int argc,char *argv[]) {
         ++failures;
     }
 
-    if (Json *diffusion=findWith(documents,"ICSystem","bump")) {
+    if (Json *diffusion=findWith(documents,"ICSystem","initial_concentration")) {
         changed=*diffusion;
         changed["MeshModify"]={
             {"type","pre_existing_cracks"},
@@ -319,7 +359,7 @@ int main(int argc,char *argv[]) {
         expectRejected("crack on non-fracture element",changed);
     }
 
-    if (Json *diffusion=findWith(documents,"ICSystem","bump")) {
+    if (Json *diffusion=findWith(documents,"ICSystem","initial_concentration")) {
         const std::vector<std::pair<std::string,Json>> profiles={
             {"constant",{{"type","constant"},{"dof","c"},{"value",0.2}}},
             {"linear",{{"type","linear"},{"dof","c"},{"offset",0.2},
@@ -364,7 +404,7 @@ int main(int argc,char *argv[]) {
         expectAccepted("published PDMesh options",changed);
     }
 
-    if (Json *diffusion=findWith(documents,"ICSystem","bump")) {
+    if (Json *diffusion=findWith(documents,"ICSystem","initial_concentration")) {
         changed=*diffusion;
         changed["Mesh"]={{"type","circle"},{"radius",1.0},{"layers",20},
                          {"center",Json::array({0.0,0.0})},{"boundary","outer"},

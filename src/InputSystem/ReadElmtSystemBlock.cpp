@@ -17,6 +17,17 @@
 #include "ElmtSystem/PoissonElement.h"
 #include "ElmtSystem/StressCahnHilliardElement.h"
 
+namespace {
+// The published fracture elements accept the release-rate threshold under
+// either its historical name G0 or the standard Gc; the schema guarantees
+// exactly one is present.
+double criticalReleaseRate(const nlohmann::ordered_json &params) {
+    return params.contains("Gc")
+        ? params.at("Gc").get<double>()
+        : params.at("G0").get<double>();
+}
+}
+
 bool InputSystem::readElmtSystemBlock(const nlohmann::ordered_json &json,
                                       ElmtSystem &elements,
                                       const int meshDim) {
@@ -47,7 +58,7 @@ bool InputSystem::readElmtSystemBlock(const nlohmann::ordered_json &json,
         built->setE(params.at("E").get<double>());
         built->setNu(params.at("nu").get<double>());
         built->setRho(params.at("rho").get<double>());
-        built->setG0(params.at("Gc").get<double>());
+        built->setG0(criticalReleaseRate(params));
         built->setTensionOnly(params.at("tension_only").get<bool>());
         built->setDamageOn(params.at("damage").get<bool>());
         if (meshDim==2) {
@@ -63,7 +74,7 @@ bool InputSystem::readElmtSystemBlock(const nlohmann::ordered_json &json,
         built->setE(params.at("E").get<double>());
         built->setNu(params.at("nu").get<double>());
         built->setRho(params.at("rho").get<double>());
-        built->setG0(params.at("Gc").get<double>());
+        built->setG0(criticalReleaseRate(params));
         built->setTensionOnly(params.at("tension_only").get<bool>());
         built->setDamageOn(params.at("damage").get<bool>());
         if (meshDim==2) {
@@ -101,9 +112,12 @@ bool InputSystem::readElmtSystemBlock(const nlohmann::ordered_json &json,
         built->setChi(params.at("chi").get<double>());
         built->setKappa(params.at("kappa").get<double>());
         built->setRho(params.at("rho").get<double>());
-        built->setG0(params.at("Gc").get<double>());
+        built->setG0(criticalReleaseRate(params));
         built->setTensionOnly(params.at("tension_only").get<bool>());
-        built->setDamageOn(params.at("damage").get<bool>());
+        // damage_on is the canonical switch; damage is its published alias.
+        built->setDamageOn(params.contains("damage_on")
+                               ? params.at("damage_on").get<bool>()
+                               : params.at("damage").get<bool>());
         if (params.contains("residual_stiffness")) {
             built->setResidualStiffness(
                 params.at("residual_stiffness").get<double>());

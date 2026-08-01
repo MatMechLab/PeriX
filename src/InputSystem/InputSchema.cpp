@@ -563,13 +563,19 @@ bool validateElmtSystem(const Json &block,SchemaContext &context,std::string &er
         context.coupledSpecies=true;
     }
     else if (type=="pddo_dynamic_frac" || type=="explicit_pddo_frac") {
-        if (!allowedKeys(params,{"E","nu","rho","Gc","state","tension_only","damage"},
+        if (!allowedKeys(params,{"E","nu","rho","Gc","G0","state","tension_only","damage"},
                          tag+".params",error)) return false;
+        const bool hasGc=params.contains("Gc");
+        const bool hasG0=params.contains("G0");
+        if (hasGc==hasG0) {
+            return fail(error,tag+".params: provide the critical energy release rate "
+                              "exactly once, as 'Gc' or its alias 'G0'");
+        }
         double nu=0.0;
         if (!requirePositive(params,"E",tag+".params",error)
             || !requireNumber(params,"nu",tag+".params",error,&nu)
             || !requirePositive(params,"rho",tag+".params",error)
-            || !requirePositive(params,"Gc",tag+".params",error)
+            || !requirePositive(params,hasGc ? "Gc" : "G0",tag+".params",error)
             || !requireBoolean(params,"tension_only",tag+".params",error)
             || !requireBoolean(params,"damage",tag+".params",error)
             || !validatePlaneState(params,context.meshDim,tag+".params",error)) return false;
@@ -580,9 +586,9 @@ bool validateElmtSystem(const Json &block,SchemaContext &context,std::string &er
         context.explicitDynamics=(type=="explicit_pddo_frac");
     }
     else if (type=="stress_cahnhilliard") {
-        if (!allowedKeys(params,{"E","nu","D","Omega","cref","chi","kappa","state"},
+        if (!allowedKeys(params,{"E","nu","D","Omega","cref","chi","kappa","rho","state"},
                          tag+".params",error)) return false;
-        double nu=0.0;
+        double nu=0.0,rho=0.0;
         if (!requirePositive(params,"E",tag+".params",error)
             || !requireNumber(params,"nu",tag+".params",error,&nu)
             || !requirePositive(params,"D",tag+".params",error)
@@ -590,7 +596,9 @@ bool validateElmtSystem(const Json &block,SchemaContext &context,std::string &er
             || !requireNumber(params,"cref",tag+".params",error)
             || !requireNumber(params,"chi",tag+".params",error)
             || !requirePositive(params,"kappa",tag+".params",error)
+            || !optionalNumber(params,"rho",tag+".params",error,&rho)
             || !validatePlaneState(params,context.meshDim,tag+".params",error)) return false;
+        if (rho<0.0) return fail(error,tag+".params: 'rho' must be non-negative");
         if (!(nu>-1.0 && nu<0.5)) {
             return fail(error,tag+".params: 'nu' must lie in (-1,0.5)");
         }
@@ -598,8 +606,20 @@ bool validateElmtSystem(const Json &block,SchemaContext &context,std::string &er
     }
     else if (type=="frac_stress_cahnhilliard") {
         if (!allowedKeys(params,{"E","nu","D","Omega","cref","chi","kappa","rho",
-                                 "Gc","state","tension_only","damage",
+                                 "Gc","G0","state","tension_only","damage","damage_on",
                                  "residual_stiffness"},tag+".params",error)) return false;
+        const bool hasGc=params.contains("Gc");
+        const bool hasG0=params.contains("G0");
+        if (hasGc==hasG0) {
+            return fail(error,tag+".params: provide the critical energy release rate "
+                              "exactly once, as 'Gc' or its alias 'G0'");
+        }
+        const bool hasDamage=params.contains("damage");
+        const bool hasDamageOn=params.contains("damage_on");
+        if (hasDamage==hasDamageOn) {
+            return fail(error,tag+".params: provide the bond-breaking switch exactly "
+                              "once, as 'damage_on' or its alias 'damage'");
+        }
         double nu=0.0,rho=0.0,residual=1.0e-8;
         if (!requirePositive(params,"E",tag+".params",error)
             || !requireNumber(params,"nu",tag+".params",error,&nu)
@@ -609,9 +629,10 @@ bool validateElmtSystem(const Json &block,SchemaContext &context,std::string &er
             || !requireNumber(params,"chi",tag+".params",error)
             || !requirePositive(params,"kappa",tag+".params",error)
             || !requireNumber(params,"rho",tag+".params",error,&rho)
-            || !requirePositive(params,"Gc",tag+".params",error)
+            || !requirePositive(params,hasGc ? "Gc" : "G0",tag+".params",error)
             || !requireBoolean(params,"tension_only",tag+".params",error)
-            || !requireBoolean(params,"damage",tag+".params",error)
+            || !requireBoolean(params,hasDamageOn ? "damage_on" : "damage",
+                               tag+".params",error)
             || !optionalNumber(params,"residual_stiffness",tag+".params",error,&residual)
             || !validatePlaneState(params,context.meshDim,tag+".params",error)) return false;
         if (!(nu>-1.0 && nu<0.5)) {
@@ -678,7 +699,8 @@ bool validateBCSystem(const Json &block,SchemaContext &context,std::string &erro
 
         if (type=="dirichlet" || type=="neumann" || type=="speciesflux") {
             if (type=="dirichlet") {
-                if (!allowedKeys(entry,{"type","phygroup","dofs","value","direct"},
+                if (!allowedKeys(entry,{"type","phygroup","dofs","value",
+                                        "velocity","box","direct"},
                                  tag,error)
                     || !optionalBoolean(entry,"direct",tag,error)) {
                     return false;
@@ -692,6 +714,23 @@ bool validateBCSystem(const Json &block,SchemaContext &context,std::string &erro
             if (!readNamedDofs(entry,"dofs",context,tag,error,dofs)) return false;
             std::vector<double> values;
             if (!scalarOrArray(entry,"value",dofs.size(),tag,error,&values)) return false;
+            if (type=="dirichlet" && entry.contains("velocity")
+                && !scalarOrArray(entry,"velocity",dofs.size(),tag,error)) return false;
+            if (type=="dirichlet" && entry.contains("box")) {
+                const auto &box=entry.at("box");
+                if (!box.is_object() || box.empty()) {
+                    return fail(error,tag+": 'box' must be an object of axis bounds "
+                                      "{xmin,xmax,ymin,ymax,zmin,zmax}");
+                }
+                if (!allowedKeys(box,{"xmin","xmax","ymin","ymax","zmin","zmax"},
+                                 tag+".box",error)) return false;
+                for (const auto &bound:box.items()) {
+                    if (!finiteNumber(bound.value())) {
+                        return fail(error,tag+".box: '"+bound.key()
+                                          +"' must be a finite number");
+                    }
+                }
+            }
             if (type=="neumann" && !allZero(values)) {
                 return fail(error,tag+": the public generic Neumann condition is homogeneous; "
                                   "use the published traction or species-flux condition for a load");
@@ -705,22 +744,26 @@ bool validateBCSystem(const Json &block,SchemaContext &context,std::string &erro
             continue;
         }
 
-        if (type=="pdtraction") {
+        if (type=="pdtraction" || type=="sdtraction") {
             if (!allowedKeys(entry,{"type","phygroup","E","nu","state","value",
                                     "dofs","Omega","cref","c_dof"},tag,error)) return false;
+            const bool swelling=type=="sdtraction";
             double nu=0.0;
             if (!requirePositive(entry,"E",tag,error)
                 || !requireNumber(entry,"nu",tag,error,&nu)
-                || !validatePlaneState(entry,context.meshDim,tag,error)) return false;
+                || !validatePlaneState(entry,context.meshDim,tag,error,
+                                       !swelling)) return false;
             if (!(nu>-1.0 && nu<0.5)) {
                 return fail(error,tag+": 'nu' must lie in (-1,0.5)");
             }
-            if (!entry.contains("value")) {
+            if (!swelling && !entry.contains("value")) {
                 return fail(error,tag+": 'value' is required");
             }
-            const std::size_t minDim=context.meshDim==3 ? 3 : 2;
-            const std::size_t maxDim=context.meshDim==2 ? 2 : 3;
-            if (!numberArray(entry.at("value"),minDim,maxDim,tag+".value",error)) return false;
+            if (entry.contains("value")) {
+                const std::size_t minDim=context.meshDim==3 ? 3 : 2;
+                const std::size_t maxDim=context.meshDim==2 ? 2 : 3;
+                if (!numberArray(entry.at("value"),minDim,maxDim,tag+".value",error)) return false;
+            }
 
             std::vector<std::string> displacementDofs;
             if (entry.contains("dofs")
@@ -745,17 +788,27 @@ bool validateBCSystem(const Json &block,SchemaContext &context,std::string &erro
             const bool hasCref=entry.contains("cref");
             const bool hasCDof=entry.contains("c_dof");
             if (hasOmega || hasCref || hasCDof) {
-                if (!(hasOmega && hasCref && hasCDof)) {
+                // The swelling-aware traction defaults cref to zero and c_dof
+                // to the concentration field; the published pdtraction spells
+                // the chemical triple out in full.
+                if (!swelling && !(hasOmega && hasCref && hasCDof)) {
                     return fail(error,tag+": chemical traction requires Omega, cref, and c_dof together");
                 }
-                if (!finiteNumber(entry.at("Omega")) || !finiteNumber(entry.at("cref"))
-                    || !entry.at("c_dof").is_string()) {
+                if (swelling && !hasOmega) {
+                    return fail(error,tag+": the swelling traction needs 'Omega' "
+                                      "when cref or c_dof are given");
+                }
+                if ((hasOmega && !finiteNumber(entry.at("Omega")))
+                    || (hasCref && !finiteNumber(entry.at("cref")))
+                    || (hasCDof && !entry.at("c_dof").is_string())) {
                     return fail(error,tag+": Omega and cref must be numbers and c_dof a field name");
                 }
-                const std::string cName=entry.at("c_dof").get<std::string>();
-                if (cName!="c"
-                    || std::find(context.dofs.begin(),context.dofs.end(),cName)==context.dofs.end()) {
-                    return fail(error,tag+": c_dof must name the declared concentration field 'c'");
+                if (hasCDof) {
+                    const std::string cName=entry.at("c_dof").get<std::string>();
+                    if (cName!="c"
+                        || std::find(context.dofs.begin(),context.dofs.end(),cName)==context.dofs.end()) {
+                        return fail(error,tag+": c_dof must name the declared concentration field 'c'");
+                    }
                 }
             }
             context.hasPDTraction=true;
@@ -763,7 +816,7 @@ bool validateBCSystem(const Json &block,SchemaContext &context,std::string &erro
         }
 
         return fail(error,tag+": public BC type must be dirichlet, neumann, "
-                          "pdtraction, or speciesflux");
+                          "pdtraction, sdtraction, or speciesflux");
     }
     return true;
 }
@@ -1185,8 +1238,8 @@ bool InputSchema::validate(const nlohmann::ordered_json &document,
                           "central-difference element only");
     }
     if (context.explicitDynamics && context.hasPDTraction) {
-        return fail(error,"pdtraction requires an assembled linear system and is invalid "
-                          "for the matrix-free explicit element");
+        return fail(error,"the strong traction conditions require an assembled linear "
+                          "system and are invalid for the matrix-free explicit element");
     }
     if (context.hasSpeciesFlux && !context.coupledSpecies) {
         return fail(error,"speciesflux requires a published species element");
