@@ -1,0 +1,1864 @@
+%==================================================================
+% PeriX -- Reference Manual
+% Peridynamic Differential Operator framework for multiphysics
+% Author: Yang Bai / MMLab
+% License: GNU GPLv3
+%==================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{a4paper,margin=2.4cm}
+\emergencystretch=3em % a little extra inter-word stretch to avoid overfull lines
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!60!black,
+  citecolor=blue!50!black,
+  bookmarksnumbered=true,
+  pdftitle={PeriX Reference Manual},
+  pdfauthor={Yang Bai}
+}
+\usepackage{listings}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{fancyhdr}
+\usepackage{titling}
+\usepackage{caption}
+\usepackage{graphicx}
+
+% --- Code listings (JSON / Bash / C++) ---
+\definecolor{lstbg}{rgb}{0.97,0.97,0.97}
+\definecolor{lstkw}{rgb}{0.10,0.30,0.70}
+\definecolor{lstst}{rgb}{0.60,0.00,0.00}
+\definecolor{lstcm}{rgb}{0.30,0.50,0.30}
+\lstdefinelanguage{json}{
+  morestring=[b]",
+  morecomment=[l]{//},
+  literate=
+   *{0}{{{\color{lstst}0}}}{1}
+    {1}{{{\color{lstst}1}}}{1}
+    {2}{{{\color{lstst}2}}}{1}
+    {3}{{{\color{lstst}3}}}{1}
+    {4}{{{\color{lstst}4}}}{1}
+    {5}{{{\color{lstst}5}}}{1}
+    {6}{{{\color{lstst}6}}}{1}
+    {7}{{{\color{lstst}7}}}{1}
+    {8}{{{\color{lstst}8}}}{1}
+    {9}{{{\color{lstst}9}}}{1}
+    {:}{{{\color{lstkw}{:}}}}{1}
+    {,}{{{\color{lstkw}{,}}}}{1}
+    {\{}{{{\color{lstkw}{\{}}}}{1}
+    {\}}{{{\color{lstkw}{\}}}}}{1}
+    {[}{{{\color{lstkw}{[}}}}{1}
+    {]}{{{\color{lstkw}{]}}}}{1}
+}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  backgroundcolor=\color{lstbg},
+  keywordstyle=\color{lstkw}\bfseries,
+  stringstyle=\color{lstst},
+  commentstyle=\color{lstcm}\itshape,
+  breaklines=true,
+  breakatwhitespace=true,
+  columns=fullflexible,
+  showstringspaces=false,
+  frame=single,
+  framerule=0.3pt,
+  rulecolor=\color{black!30},
+  tabsize=2,
+  captionpos=b,
+  xleftmargin=8pt,
+  xrightmargin=4pt,
+  literate=
+    {Pe}{Pe}{2}
+}
+
+% Inline code that may break after the usual separators (/ . : -) so long
+% file paths and qualified names wrap instead of overrunning the right margin.
+% The argument is re-scanned with those characters made active; \_ , spaces and
+% other LaTeX markup are preserved. Robust so it also works in section titles.
+\makeatletter
+% Break opportunities for the re-scan below: preferred (zero-penalty) breaks
+% after path / qualifier separators "/ . : -", and fall-back breaks before an
+% upper-case letter (camelCase) that are taken only when no separator break
+% keeps the line inside the margin. "=" is intentionally NOT made active (it
+% would corrupt the \catcode...=\active assignments themselves).
+\begingroup
+\catcode`\/=\active \catcode`\.=\active \catcode`\:=\active \catcode`\-=\active
+\catcode`\A=\active \catcode`\B=\active \catcode`\C=\active \catcode`\D=\active
+\catcode`\E=\active \catcode`\F=\active \catcode`\G=\active \catcode`\H=\active
+\catcode`\I=\active \catcode`\J=\active \catcode`\K=\active \catcode`\L=\active
+\catcode`\M=\active \catcode`\N=\active \catcode`\O=\active \catcode`\P=\active
+\catcode`\Q=\active \catcode`\R=\active \catcode`\S=\active \catcode`\T=\active
+\catcode`\U=\active \catcode`\V=\active \catcode`\W=\active \catcode`\X=\active
+\catcode`\Y=\active \catcode`\Z=\active
+\gdef\perix@codebrk{%
+  \def/{\char`\/\allowbreak}\def.{\char`\.\allowbreak}%
+  \def:{\char`\:\allowbreak}\def-{\char`\-\allowbreak}%
+  \def\_{\textunderscore\allowbreak}% break after underscores too (file names)
+  \def A{\penalty200\char`\A}\def B{\penalty200\char`\B}\def C{\penalty200\char`\C}%
+  \def D{\penalty200\char`\D}\def E{\penalty200\char`\E}\def F{\penalty200\char`\F}%
+  \def G{\penalty200\char`\G}\def H{\penalty200\char`\H}\def I{\penalty200\char`\I}%
+  \def J{\penalty200\char`\J}\def K{\penalty200\char`\K}\def L{\penalty200\char`\L}%
+  \def M{\penalty200\char`\M}\def N{\penalty200\char`\N}\def O{\penalty200\char`\O}%
+  \def P{\penalty200\char`\P}\def Q{\penalty200\char`\Q}\def R{\penalty200\char`\R}%
+  \def S{\penalty200\char`\S}\def T{\penalty200\char`\T}\def U{\penalty200\char`\U}%
+  \def V{\penalty200\char`\V}\def W{\penalty200\char`\W}\def X{\penalty200\char`\X}%
+  \def Y{\penalty200\char`\Y}\def Z{\penalty200\char`\Z}%
+}
+\endgroup
+\DeclareRobustCommand{\code}[1]{%
+  \ifmmode
+    \text{\ttfamily\small #1}% in math mode: plain monospace, no re-scan
+  \else
+    \begingroup
+      \ttfamily\small
+      \catcode`\/=\active \catcode`\.=\active \catcode`\:=\active \catcode`\-=\active
+      \catcode`\A=\active \catcode`\B=\active \catcode`\C=\active \catcode`\D=\active
+      \catcode`\E=\active \catcode`\F=\active \catcode`\G=\active \catcode`\H=\active
+      \catcode`\I=\active \catcode`\J=\active \catcode`\K=\active \catcode`\L=\active
+      \catcode`\M=\active \catcode`\N=\active \catcode`\O=\active \catcode`\P=\active
+      \catcode`\Q=\active \catcode`\R=\active \catcode`\S=\active \catcode`\T=\active
+      \catcode`\U=\active \catcode`\V=\active \catcode`\W=\active \catcode`\X=\active
+      \catcode`\Y=\active \catcode`\Z=\active
+      \perix@codebrk
+      \endlinechar=\m@ne
+      \scantokens{#1}%
+    \endgroup
+  \fi}
+\makeatother
+% In PDF bookmarks / metadata the breakable form cannot expand; use plain text.
+\pdfstringdefDisableCommands{\def\code#1{#1}}
+\newcommand{\PeriX}{\textsf{PeriX}}
+\newcommand{\Lap}{\nabla^{2}}
+\newcommand{\Grad}{\nabla}
+\newcommand{\Div}{\nabla\cdot}
+
+\title{
+  \vspace{-1.4cm}
+  \textbf{\textsf{PeriX} -- Reference Manual} \\[0.4em]
+  \large Peridynamic Differential Operator (PDDO) Framework for Multiphysics Simulation
+}
+\author{Yang Bai\\\small Materials Mechanics Lab (MMLab) \\ \small \texttt{yangbai90@outlook.com}}
+\date{Release tag: 2026-04-16, version 0.10}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\PeriX{} Manual}
+\fancyhead[R]{\thepage}
+
+%==================================================================
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent
+\PeriX{} is an open-source C++20 framework for solving steady and
+transient multiphysics problems by means of the
+\emph{Peridynamic Differential Operator} (PDDO). The PDDO is a
+nonlocal collocation-style method due to E.~Madenci and co-workers
+that reproduces ordinary partial derivatives of arbitrary order on
+a point cloud inside a finite \emph{horizon} $\delta$, using a
+weighted least-squares fit against a polynomial basis. \PeriX{}
+ships with seven physics kernels -- Poisson, transient diffusion,
+Cahn--Hilliard phase separation, implicit and explicit bond-breaking
+peridynamic fracture, and stress-assisted Cahn--Hilliard transport
+with and without fracture -- driven entirely by a single JSON input
+file. This manual documents the public release: the build system,
+the command line, the complete JSON input schema with every
+recognised key, its type, default value and validation rule, the
+mathematical formulation of each kernel exactly as implemented, the
+boundary- and initial-condition machinery, the linear and nonlinear
+solvers, the output system, and all bundled example problems.
+Every statement in this manual has been cross-checked against the
+source code of the release.
+\end{abstract}
+
+\vspace{0.5em}
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Repository & \url{https://github.com/MatMechLab/PeriX} \\
+License    & GNU General Public License v3.0 (GPLv3) \\
+Language   & C++20 (CMake $\geq$ 3.21) \\
+Input      & a single JSON file (\code{perix -i input.json}) \\
+Output     & VTK \code{.vtu}/\code{.pvd} and/or ExodusII \code{.e} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\newpage
+\tableofcontents
+\newpage
+
+%==================================================================
+\section{Introduction}
+%==================================================================
+
+\subsection{What is \PeriX{}?}
+
+\PeriX{} discretises partial differential equations on a
+\emph{peridynamic point cloud}: every material point $i$ carries a
+position $\mathbf{x}_i$, a volume $V_i$, and a family
+$\mathcal{H}_i$ of neighbouring points within a horizon $\delta$.
+Spatial derivatives are replaced by the Peridynamic Differential
+Operator, a set of per-bond weights $g_i^{\,q}(\mathbf{x}_j)$ such
+that, for a smooth field $u$,
+\begin{equation}
+  \left.\frac{\partial^{|q|} u}{\partial x^{q_1}\partial y^{q_2}\partial z^{q_3}}\right|_{\mathbf{x}_i}
+  \;\approx\; \sum_{j\in\mathcal{H}_i} g_i^{\,q}(\mathbf{x}_j)\,
+  \bigl(u_j-u_i\bigr),
+  \label{eq:pddo-idea}
+\end{equation}
+where the neighbour volume $V_j$ is already contained in
+$g_i^{\,q}$. Because \eqref{eq:pddo-idea} needs no mesh topology,
+no shape functions and no integration rule, the same machinery
+serves diffusion-type equations, fourth-order Cahn--Hilliard
+systems, and bond-based dynamic fracture on one code path.
+
+The public release contains seven ready-to-use physics kernels
+(Table~\ref{tab:kernels}); each is selected by a single
+\code{type} string in the \code{ElmtSystem} block of the input
+file.
+
+\begin{table}[htbp]
+\centering
+\caption{Physics kernels in the public release.}
+\label{tab:kernels}
+\footnotesize
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Kernel \code{type}} & \textbf{DoFs} & \textbf{Physics} \\
+\midrule
+\code{poisson}          & \code{u}  & steady Poisson equation $\sigma\Lap u + f = 0$ \\
+\code{diffusion}        & \code{c}  & transient diffusion $\dot c = D\Lap c + f$ (backward Euler) \\
+\code{cahnhilliard}     & \code{c},\code{mu} & Cahn--Hilliard phase separation, mixed two-field split \\
+\code{pddo\_dynamic\_frac} & \code{ux},\code{uy}(,\code{uz}) & implicit PDDO elastodynamics with critical-stretch bond failure \\
+\code{explicit\_pddo\_frac} & \code{ux},\code{uy}(,\code{uz}) & explicit (central-difference) matrix-free variant of the above \\
+\code{stress\_cahnhilliard} & \code{c},\code{mu},\code{ux},\code{uy}(,\code{uz}) & stress-assisted Cahn--Hilliard transport coupled to elasticity \\
+\code{frac\_stress\_cahnhilliard} & \code{c},\code{mu},\code{ux},\code{uy}(,\code{uz}) & stress-assisted CH with bond-breaking fracture \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Scope of this manual}
+
+This manual documents exactly what the public repository accepts
+and computes. The JSON validator
+(\code{src/InputSystem/InputSchema.cpp}) is strict: any unknown
+block, unknown key, wrong type or out-of-range value aborts the run
+with a descriptive error message before any computation starts.
+Consequently, every key listed in Section~\ref{sec:input} is the
+complete public vocabulary -- there are no hidden options.
+
+\subsection{Source layout}
+
+\begin{table}[htbp]
+\centering
+\caption{Repository layout.}
+\label{tab:layout}
+\footnotesize
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{Directory} & \textbf{Contents} \\
+\midrule
+\code{src/}, \code{include/} & C++ sources and headers, one directory per subsystem (\code{Mesh}, \code{PDMesh}, \code{ElmtSystem}, \code{BCSystem}, \code{ICSystem}, \code{EquationSystem}, \code{LinearSolver}, \code{NonlinearSolver}, \code{TimeStepping}, \code{OutputSystem}, \code{InputSystem}, \code{PDProblem}, \code{Utils}) \\
+\code{external/} & vendored header-only dependencies: Eigen and nlohmann/json (no downloads at configure time) \\
+\code{examples/} & eleven ready-to-run JSON decks plus Gmsh meshes (Section~\ref{sec:examples}) \\
+\code{tests/}    & unit and integration tests registered with CTest \\
+\code{documents/}& this manual \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%==================================================================
+\section{Installation}
+%==================================================================
+
+\subsection{Requirements}
+
+\begin{itemize}[nosep]
+  \item CMake $\geq$ 3.21;
+  \item a C++20 compiler (GCC, Clang or MSVC);
+  \item nothing else for the base build -- Eigen and nlohmann/json
+        are vendored in \code{external/}.
+\end{itemize}
+
+Optional features and their extra requirements:
+
+\begin{itemize}[nosep]
+  \item \textbf{OpenMP assembly} -- an OpenMP-capable compiler
+        (enabled by default, see below);
+  \item \textbf{Intel MKL PARDISO} direct solver -- an Intel oneAPI
+        or standalone MKL installation;
+  \item \textbf{AMGCL} iterative solver -- an AMGCL source tree and
+        OpenMP;
+  \item \textbf{CUDA assembly} -- the CUDA toolkit;
+  \item \textbf{NVIDIA cuDSS} direct solver -- the cuDSS library
+        and the CUDA toolkit.
+\end{itemize}
+
+\subsection{CMake options}
+
+\begin{table}[htbp]
+\centering
+\caption{CMake configure options. ``Compile definition'' is the
+preprocessor symbol the option enables in the code.}
+\label{tab:cmake}
+\footnotesize
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Option (default)} & \textbf{Compile definition} & \textbf{Effect / additional variables} \\
+\midrule
+\code{PARALLEL\_ASSEMBLE} (\code{ON}) & \code{PERIX\_PARALLEL\_ASSEMBLE} & builds the OpenMP assembly backend; needed for \code{"assemble": "openmp"} \\
+\code{USE\_ONEAPI} (\code{OFF}) & \code{PERIX\_HAS\_PARDISO} & builds the MKL PARDISO backend; set \code{ONEAPI\_DIR} (or the \code{MKLROOT} environment variable) to the oneAPI/MKL root \\
+\code{USE\_AMGCL} (\code{OFF}) & \code{PERIX\_HAS\_AMGCL} & builds the AMGCL CPU/OpenMP backend; set \code{AMGCL\_DIR} to the AMGCL source or install root; compiled with \code{AMGCL\_NO\_BOOST}; requires OpenMP \\
+\code{CUDA\_ASSEMBLE} (\code{OFF}) & \code{PERIX\_CUDA\_ASSEMBLE} & builds the CUDA assembly backend; needed for \code{"assemble": "cuda"} \\
+\code{USE\_CUDSS} (\code{OFF}) & \code{PERIX\_HAS\_CUDSS} & builds the NVIDIA cuDSS backend; set \code{CUDSS\_DIR} to the cuDSS root (and \code{CUDA\_DIR} if the toolkit is not in a default location) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Building}
+
+\begin{lstlisting}[language=bash]
+git clone https://github.com/MatMechLab/PeriX.git
+cd PeriX
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j
+\end{lstlisting}
+
+\noindent
+The executable is \code{build/perix}; it links against the static
+library \code{perix\_core} that contains the entire framework.
+A fully featured configure line looks like:
+
+\begin{lstlisting}[language=bash]
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release \
+  -DUSE_ONEAPI=ON -DONEAPI_DIR=/opt/intel/oneapi \
+  -DUSE_AMGCL=ON  -DAMGCL_DIR=$HOME/amgcl \
+  -DCUDA_ASSEMBLE=ON -DUSE_CUDSS=ON -DCUDSS_DIR=/opt/nvidia/cudss
+\end{lstlisting}
+
+\subsection{Running the test suite}
+
+The repository registers 29 CTest cases grouped under the labels
+\code{unit}, \code{integration}, \code{examples} and \code{amgcl}:
+
+\begin{lstlisting}[language=bash]
+cd build
+ctest -j 16 --output-on-failure          # everything
+ctest -L unit                            # only the unit tests
+ctest -L examples                        # run the bundled decks
+\end{lstlisting}
+
+%==================================================================
+\section{Running \PeriX{}}
+%==================================================================
+
+\subsection{Command line}
+
+\begin{lstlisting}[language=bash]
+perix -i input.json              # parse, validate and solve
+perix -i input.json --read-only  # parse and validate only, no solve
+\end{lstlisting}
+
+The command line accepts exactly two options:
+
+\begin{description}[nosep]
+  \item[\code{-i <file>}] the JSON input file. The name
+    \emph{must} end in \code{.json}; anything else is rejected.
+  \item[\code{--read-only}] stop after reading and validating the
+    input file. Useful to syntax-check a deck without running it.
+\end{description}
+
+Any parse or validation error prints a descriptive message and the
+process exits with a non-zero status. On startup \PeriX{} prints a
+banner with the version (0.10) and release date (2026-04-16).
+
+\subsection{Files written by a run}
+
+For an input file \code{job.json} (``stem'' = \code{job}):
+
+\begin{table}[htbp]
+\centering
+\caption{Output files produced for input \code{job.json}.}
+\label{tab:outfiles}
+\footnotesize
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+\textbf{File} & \textbf{Contents} \\
+\midrule
+\code{job-pdmesh.vtu} & the PD point cloud (always written after mesh generation) \\
+\code{job-mesh.vtu} & the background mesh; only when \code{"savemesh": true} in the \code{Mesh} block \\
+\code{job-PD-results.vtu} & static analysis: nodal solution and projected fields on the PD points \\
+\code{job-PD-results-00000.vtu}, \ldots & transient analysis: one file per saved step \\
+\code{job-PD-results.pvd} & ParaView time-series index over the PD result files \\
+\code{job-Element-results[-NNNNN].vtu} & cell-data view of the same results on the background mesh, plus \code{job-Element-results.pvd} \\
+\code{job.e} & ExodusII database; only when \code{"format"} is \code{"exodus"} or \code{"both"} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Transient runs save step 0, every \code{interval}-th step, and the
+final step (Section~\ref{sec:output}).
+
+%==================================================================
+\section{The Peridynamic Differential Operator}
+\label{sec:pddo}
+%==================================================================
+
+This section states the PDDO construction exactly as implemented in
+\code{src/PDMesh/CalcPDOperators.cpp}.
+
+\subsection{Families, bonds and the horizon}
+
+Every PD point $i$ owns a family
+$\mathcal{H}_i=\{\,j \neq i : |\boldsymbol{\xi}_{ij}|\le\delta_i\,\}$ with
+$\boldsymbol{\xi}_{ij}=\mathbf{x}_j-\mathbf{x}_i$ the \emph{bond}
+vector. The horizon is
+\begin{equation}
+  \delta = m \cdot \Delta x,
+\end{equation}
+where $m$ is the input key \code{HorizonRadiusFactor} and
+$\Delta x$ the characteristic grid spacing of the mesh. With
+\code{VariableHorizon} enabled the per-point horizon becomes
+$\delta_i=\delta\, s_i/s_{\mathrm{ref}}$
+(Section~\ref{sec:varhorizon}).
+
+\subsection{Weight and partial-volume correction}
+
+Each bond carries a Gaussian influence weight
+\begin{equation}
+  w(|\boldsymbol{\xi}|)
+  = \exp\!\left[-\left(\frac{2|\boldsymbol{\xi}|}{\delta}\right)^{2}\right],
+  \label{eq:weight}
+\end{equation}
+and a Madenci-style partial-volume correction factor
+\begin{equation}
+  v_c(|\boldsymbol{\xi}|) =
+  \begin{cases}
+    1, & |\boldsymbol{\xi}| \le \delta - \Delta x/2,\\[2pt]
+    \dfrac{\delta - |\boldsymbol{\xi}| + \Delta x/2}{\Delta x}
+      \ \text{clamped to } [0,1], & \text{otherwise},
+  \end{cases}
+  \label{eq:volcorr}
+\end{equation}
+which linearly fades the volume of neighbours whose cells straddle
+the horizon sphere. The corrected neighbour volume
+$v_c\,V_j$ is used everywhere below.
+
+\subsection{Moment matrix and operator weights}
+
+Let $N$ be the polynomial order (input key \code{Order}, minimum 2,
+maximum 6). The monomial basis on the \emph{normalised} bond
+$\boldsymbol{\eta}=\boldsymbol{\xi}/\delta$ contains every
+multi-index $q=(q_1,q_2,q_3)$ with $1 \le q_1+q_2+q_3 \le N$
+($q_3=0$ in 2-D); the constant term is excluded because the
+operator acts on differences $u_j-u_i$. For each point $i$ the
+symmetric moment matrix
+\begin{equation}
+  A_{ab} \;=\; \sum_{j\in\mathcal{H}_i}
+      w\,v_c\,V_j\;
+      \boldsymbol{\eta}^{\,q_a}\,\boldsymbol{\eta}^{\,q_b}
+  \label{eq:moment}
+\end{equation}
+is assembled, where
+$\boldsymbol{\eta}^{\,q}=\eta_x^{q_1}\eta_y^{q_2}\eta_z^{q_3}$.
+The coefficient matrix $a$ solves
+\begin{equation}
+  A\,a = B, \qquad
+  B_{ab} = q_1!\,q_2!\,q_3!\;\delta_{ab},
+\end{equation}
+via a full-pivot LU decomposition; the solution is accepted only if
+the relative residual is below $10^{-8}$, otherwise the point is
+reported as degenerate and the run aborts (with one exception, see
+Section~\ref{sec:ghost}). Finally the operator weight of bond
+$(i,j)$ for derivative $q_k$ is
+\begin{equation}
+  g_i^{\,q_k}(\mathbf{x}_j) \;=\;
+  \frac{w\,v_c\,V_j}{\delta^{\,|q_k|}}
+  \sum_{a} a_{ak}\,\boldsymbol{\eta}^{\,q_a},
+  \label{eq:gfun}
+\end{equation}
+and any partial derivative of a field $u$ is evaluated by the sum
+\eqref{eq:pddo-idea}. Note that $V_j$ is baked into
+$g_i^{\,q_k}$ -- kernels never multiply by the neighbour volume
+again.
+
+Operators are stored under human-readable names:
+\code{d/dx}, \code{d/dy}, \code{d2/dx2}, \code{d2/dxdy},
+\code{d2/dy2}, \code{d3/dx3}, \ldots{} -- one per multi-index up to
+order $N$. Order $N=2$ (the minimum the validator accepts) already
+provides all first and second derivatives, which is what every
+bundled kernel consumes; higher orders increase the accuracy of
+those derivatives and make higher derivatives available.
+
+\subsection{Cracks and modified families}
+
+When \code{MeshModify} defines pre-existing cracks
+(Section~\ref{sec:meshmodify}), bonds that geometrically intersect
+a crack segment are excluded from both the moment matrix
+\eqref{eq:moment} and the operator sums \eqref{eq:gfun} --
+\emph{unless} the treatment is \code{force\_only}, in which case
+the bond stays in the family and the operators, and the fracture
+kernels instead start it with zero mechanical health
+(Section~\ref{sec:fracture}).
+
+%==================================================================
+\section{Meshes and the PD Point Cloud}
+\label{sec:mesh}
+%==================================================================
+
+\PeriX{} first builds (or imports) a background mesh, then collapses
+every cell to one PD point at its centroid carrying the cell
+measure as its volume $V_i$. All physics lives on the PD cloud; the
+background mesh is kept only for visualisation
+(\code{*-Element-results*.vtu}).
+
+\subsection{Built-in structured mesh (\code{"type": "perix"})}
+
+Generates a uniform grid of \code{quad4} cells in 2-D or
+\code{hex8} cells in 3-D on the box
+$[x_{\min},x_{\max}]\times[y_{\min},y_{\max}]
+ (\times[z_{\min},z_{\max}])$ with $n_x\times n_y(\times n_z)$
+cells. PD points sit at cell centres and carry
+$V_i=\Delta X\,\Delta Y(\,\Delta Z)$.
+
+\subsection{Imported Gmsh mesh (\code{"type": "gmsh"})}
+
+Reads an \emph{ASCII} Gmsh MSH~4.1 file (binary files are
+rejected). Supported element types are \code{POINT},
+\code{EDGE2}, \code{TRI3}, \code{QUAD4}, \code{TET4} and
+\code{HEX8}; mixing different element types of the top dimension in
+one file is rejected. The file must contain a
+\code{\$PhysicalNames} section -- physical groups become \PeriX{}
+node groups usable in boundary conditions. PD points sit at cell
+centroids with $V_i$ the cell area/volume; the characteristic
+spacing used for the horizon is the median of
+$V_i^{1/\dim}$.
+
+\subsection{Built-in disc mesh (\code{"type": "circle"})}
+
+Generates a 2-D disc of given \code{radius} as \code{layers}
+concentric rings of cells around the centre; ring thickness (and
+hence local point density) is uniform in radius. The outer rim is
+wrapped in ghost points when \code{boundary} is \code{true} (or the
+string \code{"outer"}), producing the groups \code{outernodes}
+(bulk rim) and \code{outernodes\_ghost} (fictitious layer).
+
+\subsection{Ghost boundary layer}
+\label{sec:ghost}
+
+Boundary conditions in a nonlocal method need a \emph{fictitious
+layer} of points outside the physical domain. \PeriX{} adds
+\code{ghost\_layer} rings (default 1) of ghost points on the outer
+boundary:
+
+\begin{itemize}[nosep]
+  \item structured meshes: ghosts are placed half a cell outside
+        each boundary face;
+  \item imported meshes: ghosts are the mirror images of the
+        near-boundary bulk points, reflected across the boundary
+        face plane;
+  \item disc meshes: ghosts continue the outermost ring pattern.
+\end{itemize}
+
+Each boundary wall \code{<wall>} yields two node groups:
+\code{<wall>nodes\_ghost} (the ghost points) and
+\code{<wall>nodes} (their mirror bulk partners). Structured walls
+are named \code{left}, \code{right}, \code{bottom}, \code{top}
+(plus \code{back}, \code{front} in 3-D); e.g.\
+\code{leftnodes\_ghost}. Imported meshes keep their Gmsh physical
+names and the same \code{\_ghost} suffix convention. The group
+\code{alldomain} always addresses every bulk (non-ghost) point.
+
+Ghost points participate in neighbour families and PDDO operators
+like any other point; their rows in the global system are what the
+boundary conditions overwrite (Section~\ref{sec:bc}). Points in
+ghost layers deeper than the first that end up with a degenerate
+moment matrix receive zero operators instead of aborting the run
+(their rows are fully replaced by BCs anyway); a degenerate
+\emph{bulk} point is always a fatal error.
+
+\subsection{Variable horizon}
+\label{sec:varhorizon}
+
+With \code{"VariableHorizon": true} in \code{PDMesh}, each point
+gets its own horizon
+\begin{equation}
+  \delta_i=\delta\,\frac{s_i}{s_{\mathrm{ref}}},\qquad
+  s_i=V_i^{1/\dim},\qquad
+  s_{\mathrm{ref}}=\operatorname{median}_k s_k,
+\end{equation}
+so the physical horizon scales with the local point spacing on
+graded meshes (e.g.\ the \code{circle} mesh). A pair $(i,j)$ is
+bonded if
+$|\boldsymbol{\xi}_{ij}|\le\max(\delta_i,\delta_j)$, keeping bonds
+symmetric. Fracture kernels then use the pairwise mean
+$\delta_b=\tfrac12(\delta_i+\delta_j)$ in the critical-stretch
+formula.
+
+\subsection{Pre-existing cracks (\code{MeshModify})}
+\label{sec:meshmodify}
+
+The \code{MeshModify} block (allowed only together with a fracture
+kernel) cuts cracks into the initial bond network. Cracks can be
+given as explicit segments (\code{Cracks}) or generated from
+parametric presets (\code{Presets}, types \code{center\_crack} and
+\code{edge\_crack}); Section~\ref{sec:input-meshmodify} lists every
+key. With the only public treatment, \code{force\_only}, severed
+bonds keep contributing to the PDDO operators (so gradients stay
+accurate near the crack faces) while the fracture kernels start
+them at zero mechanical health -- the crack is invisible to
+transport terms but mechanically open from step one.
+
+%==================================================================
+\section{JSON Input Reference}
+\label{sec:input}
+%==================================================================
+
+\subsection{General structure and validation}
+
+The input is a single JSON object. Twelve top-level blocks are
+recognised; any other key is rejected. Validation is strict and
+happens before any computation: unknown keys \emph{inside} a block,
+wrong JSON types, and out-of-range values all abort the run with a
+message naming the offending block and key.
+
+\begin{table}[htbp]
+\centering
+\caption{Top-level blocks.}
+\label{tab:blocks}
+\footnotesize
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Block} & \textbf{Presence} & \textbf{Purpose} \\
+\midrule
+\code{Mesh}            & required & background mesh (Section~\ref{sec:input-mesh}) \\
+\code{PDMesh}          & required & horizon, PDDO order, ghost layers (Section~\ref{sec:input-pdmesh}) \\
+\code{MeshModify}      & optional & pre-existing cracks (Section~\ref{sec:input-meshmodify}) \\
+\code{DOFs}            & required & symbolic field names (Section~\ref{sec:input-dofs}) \\
+\code{ElmtSystem}      & required & the physics kernel and its parameters (Section~\ref{sec:elmt}) \\
+\code{BCSystem}        & required & boundary conditions (Section~\ref{sec:bc}) \\
+\code{ICSystem}        & optional & initial conditions (Section~\ref{sec:ic}) \\
+\code{JobSystem}       & optional & static/transient switch, assembly backend (Section~\ref{sec:job}) \\
+\code{TimeStepping}    & see text & time step control; required for transient jobs, forbidden for static ones \\
+\code{NonlinearSolver} & optional & Newton iteration control (Section~\ref{sec:newton}) \\
+\code{LinearSolver}    & optional & linear solver selection (Section~\ref{sec:linsolver}) \\
+\code{OutputSystem}    & optional & output cadence, fields, format (Section~\ref{sec:output}) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+With \code{--read-only} (or when only the mesh is being inspected)
+just the \code{Mesh} block is mandatory; a normal solve requires
+\code{Mesh}, \code{PDMesh}, \code{DOFs}, \code{ElmtSystem} and
+\code{BCSystem}.
+
+\subsection{\code{Mesh}}
+\label{sec:input-mesh}
+
+The mandatory key \code{type} selects one of three generators:
+\code{"perix"} (structured box), \code{"gmsh"} (import), or
+\code{"circle"} (2-D disc).
+
+\subsubsection*{\code{"type": "perix"} -- structured box}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{Mesh} keys for \code{type=perix}.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning / constraints} \\
+\midrule
+\code{dim}      & int    & required & 2 or 3 \\
+\code{meshtype} & string & required & \code{"quad4"} in 2-D, \code{"hex8"} in 3-D (enforced) \\
+\code{nx},\code{ny} & int & required & cells per direction, $\geq 1$ \\
+\code{nz}       & int    & required in 3-D & rejected in 2-D, as are \code{zmin}/\code{zmax} \\
+\code{xmin},\code{xmax} & number & 0, 1 & domain extent; every minimum must be $<$ its maximum \\
+\code{ymin},\code{ymax} & number & 0, 1 & \\
+\code{zmin},\code{zmax} & number & 0, 1 & 3-D only \\
+\code{savemesh} & bool   & \code{false} & write \code{<stem>-mesh.vtu} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsubsection*{\code{"type": "gmsh"} -- imported mesh}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{Mesh} keys for \code{type=gmsh}.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning / constraints} \\
+\midrule
+\code{file}     & string & required & path to an \emph{ASCII} Gmsh MSH 4.1 file; binary files are rejected \\
+\code{savemesh} & bool   & \code{false} & write \code{<stem>-mesh.vtu} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The file must contain \code{\$PhysicalNames}; the physical groups
+become the node groups referenced by boundary conditions. Supported
+cell types: \code{POINT}, \code{EDGE2}, \code{TRI3}, \code{QUAD4},
+\code{TET4}, \code{HEX8}; mixing different cell types of the
+highest dimension is rejected.
+
+\subsubsection*{\code{"type": "circle"} -- 2-D disc}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{Mesh} keys for \code{type=circle}.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning / constraints} \\
+\midrule
+\code{radius}   & number & required & disc radius, $>0$ \\
+\code{layers}   & int    & required & number of concentric point rings, $\geq 1$ \\
+\code{center}   & array  & origin   & 2 or 3 numbers \\
+\code{boundary} & bool or string & \code{true} & \code{true}: wrap the rim in ghost points with group base name \code{outer}; a non-empty string sets a custom base name; \code{false}: no ghost rim \\
+\code{savemesh} & bool   & \code{false} & write \code{<stem>-mesh.vtu} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The rim groups are \code{<base>nodes} (outermost bulk ring) and
+\code{<base>nodes\_ghost} (fictitious rim), i.e.\
+\code{outernodes} / \code{outernodes\_ghost} by default.
+
+\subsection{\code{PDMesh}}
+\label{sec:input-pdmesh}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{PDMesh} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning / constraints} \\
+\midrule
+\code{HorizonRadiusFactor} & number & required & $m$ in $\delta=m\,\Delta x$; must be positive \\
+\code{Order} & int & required & PDDO polynomial order $N$; the validator accepts $2 \le N \le 6$ (the published kernels require at least 2) \\
+\code{VariableHorizon} & bool & \code{false} & per-point horizon scaling for graded meshes (Section~\ref{sec:varhorizon}) \\
+\code{ghost\_layer} & int & 1 & number of fictitious boundary layers, $\geq 1$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A useful rule of thumb is $m \approx 3$ with \code{Order} 2; the
+bundled examples use horizon factors between 2.03 and 3.03.
+
+\subsection{\code{MeshModify}}
+\label{sec:input-meshmodify}
+
+Allowed only when the element is one of the fracture kernels.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{MeshModify} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning / constraints} \\
+\midrule
+\code{type} & string & required & must be \code{"pre\_existing\_cracks"} \\
+\code{treatment} & string & required & must be \code{"force\_only"}: severed bonds stay in the PDDO operators but start with zero mechanical health \\
+\code{Cracks} & array & optional & explicit 2-D crack segments, see below \\
+\code{Presets} & array & optional & parametric crack generators, see below \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+At least one of \code{Cracks} / \code{Presets} must be present.
+Each \code{Cracks} item is an object
+\code{\{x1, y1, x2, y2\}} (numbers, required; the two endpoints
+must differ) plus an optional \code{label} string.
+
+Each \code{Presets} item has \code{type} \code{"center\_crack"} or
+\code{"edge\_crack"}:
+
+\begin{table}[htbp]
+\centering
+\caption{\code{Presets} item keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{Key} & \textbf{Applies to} & \textbf{Meaning / constraints} \\
+\midrule
+\code{center} or \code{center\_x}/\code{center\_y}/\code{center\_z} & center\_crack & crack midpoint; the array form and the per-component form are mutually exclusive; components default to the domain centre \\
+\code{length} & both & crack length, $>0$; required \\
+\code{width} & both & out-of-plane extrusion width (3-D), $>0$, optional \\
+\code{angle\_degrees} or \code{angle\_radians} & both & in-plane inclination; mutually exclusive; \code{edge\_crack} defaults to the inward normal of its side ($0$ for \code{left}, $\pi$ for \code{right}, $\pi/2$ for \code{bottom}, $-\pi/2$ for \code{top}) \\
+\code{normal}, \code{axis} & center\_crack & optional 3-vectors selecting the crack-plane normal / in-plane axis in 3-D; without them (and without \code{width}) a 3-D centre crack is extruded through the whole thickness \\
+\code{side} & edge\_crack & required: \code{"left"}, \code{"right"}, \code{"bottom"} or \code{"top"} \\
+\code{position} & edge\_crack & coordinate of the mouth along the chosen side \\
+\code{label} & both & optional name echoed in the log \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{\code{DOFs}}
+\label{sec:input-dofs}
+
+A non-empty array of unique, non-empty field-name strings, e.g.\
+\code{["c","mu","ux","uy"]}. The names are \emph{not} free: every
+kernel prescribes its canonical list and order
+(Table~\ref{tab:kernels}); the validator rejects any deviation.
+Boundary and initial conditions refer to these names in their
+\code{dofs}/\code{dof} keys.
+
+\subsection{Cross-block rules}
+\label{sec:crossrules}
+
+After all blocks are validated individually, the following global
+rules are enforced (each quotes the actual error condition):
+
+\begin{itemize}[nosep]
+  \item a \code{transient} job requires a \code{TimeStepping}
+        block; a \code{static} job must not have one;
+  \item \code{explicit\_pddo\_frac} requires a transient job;
+  \item \code{explicit\_pddo\_frac} is matrix-free and rejects both
+        \code{LinearSolver} and \code{NonlinearSolver} blocks, and
+        also \code{pdtraction} boundary conditions (they need an
+        assembled system);
+  \item \code{"field": "velocity"} initial conditions are accepted
+        only with the explicit central-difference element;
+  \item \code{speciesflux} boundary conditions require a species
+        transport kernel (\code{cahnhilliard},
+        \code{stress\_cahnhilliard} or
+        \code{frac\_stress\_cahnhilliard});
+  \item \code{MeshModify} requires a fracture kernel
+        (\code{pddo\_dynamic\_frac}, \code{explicit\_pddo\_frac} or
+        \code{frac\_stress\_cahnhilliard}).
+\end{itemize}
+
+%==================================================================
+\section{Physics Kernels}
+\label{sec:elmt}
+%==================================================================
+
+\subsection{The \code{ElmtSystem} block}
+
+\code{ElmtSystem} is an object containing \emph{exactly one} entry.
+The entry's key is a free label (it only appears in error
+messages); its value is an object with the two keys \code{type}
+(one of the seven kernel names) and \code{params} (an object,
+always required):
+
+\begin{lstlisting}[language=json]
+"ElmtSystem": {
+  "myblock": {
+    "type": "poisson",
+    "params": { "sigma": 1.0, "f": 1.0 }
+  }
+}
+\end{lstlisting}
+
+The top-level \code{DOFs} array must match the kernel's canonical
+field list of Table~\ref{tab:kernels} exactly -- same names, same
+order. For the mechanical kernels on a mesh whose dimension cannot
+be determined at validation time (an imported Gmsh file), both the
+2-D and the 3-D DoF lists are accepted and the actual mesh decides.
+
+Every kernel exposes \emph{projections}: derived nodal fields
+(gradients, stresses, damage, \ldots) computed after each converged
+step and written to the output files when requested by name in
+\code{OutputSystem.Fields} (Section~\ref{sec:output}).
+
+\subsection{\code{poisson} -- steady Poisson equation}
+
+Solves
+\begin{equation}
+  \sigma \Lap u + f = 0
+\end{equation}
+on the PD cloud, with the Laplacian evaluated through the PDDO
+second-derivative operators
+($\Lap = \code{d2/dx2}+\code{d2/dy2}(+\code{d2/dz2})$). The kernel
+is linear; a static job converges in one Newton iteration.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{poisson} parameters.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Constraint} & \textbf{Meaning} \\
+\midrule
+\code{sigma} & number & $>0$, required & conductivity $\sigma$ \\
+\code{f}     & number & required       & constant source term $f$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Projections:} \code{gradient} $=\Grad u$ and
+\code{flux} $=-\sigma\Grad u$ (vector fields).
+
+\subsection{\code{diffusion} -- transient diffusion}
+
+Solves
+\begin{equation}
+  \frac{\partial c}{\partial t} = D \Lap c + f
+\end{equation}
+with a backward-Euler residual
+$R_i=(c_i-c_i^{\text{old}})/\Delta t - D\Lap c_i - f$. The kernel
+is transient-only: it refuses to run without a positive time step,
+so the job must be \code{transient} with a \code{TimeStepping}
+block.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{diffusion} parameters.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Constraint} & \textbf{Meaning} \\
+\midrule
+\code{D} & number & $>0$, required & diffusivity \\
+\code{f} & number & required       & constant source term \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Projections:} \code{gradient} $=\Grad c$,
+\code{flux} $=-D\Grad c$.
+
+\subsection{\code{cahnhilliard} -- phase separation}
+\label{sec:ch}
+
+Solves the Cahn--Hilliard equation in the mixed two-field form
+\begin{align}
+  \frac{\partial c}{\partial t} &= \Div\!\bigl[M(c)\,\Grad\mu\bigr],\\
+  \mu &= f'(c) - \kappa \Lap c,
+\end{align}
+with the regular-solution free energy
+\begin{equation}
+  f'(c)=\ln\frac{c}{1-c}+\chi(1-2c),\qquad
+  f''(c)=\frac{1}{c(1-c)}-2\chi ,
+\end{equation}
+and the degenerate mobility $M(c)=M_0\,c(1-c)$. The concentration
+is clamped to $[\varepsilon,\,1-\varepsilon]$ with
+$\varepsilon=10^{-8}$ inside the logarithm and the mobility, so the
+scheme survives $c\to 0,1$. The mobility is Picard-frozen: it is
+evaluated at the current iterate and treated as constant in the
+Jacobian.
+
+Three implementation details matter for accuracy and mass
+conservation:
+\begin{itemize}[nosep]
+  \item \textbf{Conservative flux.} The transport term is
+    discretised with the antisymmetrised bond weight
+    \begin{equation}
+      w_{ij}=\tfrac12\Bigl[M_i\,g^{2}_{ij}
+        +\tfrac{V_j}{V_i}\,M_j\,g^{2}_{ji}\Bigr],\qquad
+      \Div(M\Grad\mu)\big|_i \approx \sum_j w_{ij}(\mu_j-\mu_i),
+    \end{equation}
+    where $g^{2}_{ij}$ is the PDDO Laplacian weight of bond
+    $(i,j)$. This makes the exchange between $i$ and $j$ exactly
+    antisymmetric after multiplication by $V_i$, so the total mass
+    $\sum_i V_i c_i$ is conserved to solver tolerance.
+  \item \textbf{No flux through ghosts.} Bonds that reach into the
+    fictitious boundary layer are dropped from the species flux and
+    from the $\kappa\Lap c$ term, closing the domain (zero-flux
+    walls) regardless of the boundary conditions applied to the
+    ghost rows.
+  \item \textbf{Laplacian calibration.} Each node's Laplacian
+    weights are rescaled by
+    $\lambda_i = 2\dim / \sum_j g^{2}_{ij}\,
+     |\mathbf{x}_j-\mathbf{x}_i|^{2}$
+    (the exact Laplacian of $|\mathbf{x}|^{2}$ is $2\dim$), which
+    repairs the one-sided stencils next to the boundary.
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{cahnhilliard} parameters.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Constraint} & \textbf{Meaning} \\
+\midrule
+\code{chi}   & number & required        & Flory interaction parameter $\chi$ \\
+\code{kappa} & number & $>0$, required  & gradient-energy coefficient $\kappa$ \\
+\code{M}     & number & $>0$, required  & mobility scale $M_0$ in $M(c)=M_0\,c(1-c)$ \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Projections:} \code{fPrime} $=f'(c)$ and
+\code{fDoublePrime} $=f''(c)$ (scalars).
+
+\subsection{Bond-based elasticity and fracture: common ground}
+\label{sec:fracture}
+
+The four mechanical kernels share one constitutive core. With
+displacement vector $\mathbf{u}$ and the isotropic stiffness
+constants
+\begin{equation}
+  \begin{aligned}
+  \text{plane stress:}\quad &C_{11}=\frac{E}{1-\nu^{2}},\quad
+    C_{12}=\nu C_{11},\quad C_{66}=\frac{E}{2(1+\nu)},\\
+  \text{plane strain / 3-D:}\quad &C_{11}=\lambda+2\mu_s,\quad
+    C_{12}=\lambda,\quad C_{66}=\mu_s,
+  \end{aligned}
+\end{equation}
+($\lambda,\mu_s$ the Lam\'e constants), the discrete Navier
+operator at point $i$ is assembled bond-wise from the PDDO
+second-derivative weights $G^{xx}_{ij},G^{yy}_{ij},G^{xy}_{ij},
+\ldots$ In 2-D:
+\begin{equation}
+  \begin{aligned}
+  L_x\big|_i &= \sum_j \mu_{ij}\Bigl[
+     (C_{11}G^{xx}_{ij}+C_{66}G^{yy}_{ij})\,\Delta u_x
+     +(C_{12}+C_{66})\,G^{xy}_{ij}\,\Delta u_y \Bigr],\\
+  L_y\big|_i &= \sum_j \mu_{ij}\Bigl[
+     (C_{12}+C_{66})\,G^{xy}_{ij}\,\Delta u_x
+     +(C_{66}G^{xx}_{ij}+C_{11}G^{yy}_{ij})\,\Delta u_y \Bigr],
+  \end{aligned}
+  \label{eq:navier}
+\end{equation}
+with $\Delta u_\bullet = u_{\bullet j}-u_{\bullet i}$ and the same
+pattern extended in 3-D. Here $\mu_{ij}\in\{0,1\}$ is the
+\emph{bond health}: 1 while intact, 0 once broken.
+
+\paragraph{Critical stretch.}
+A bond breaks when its stretch
+$s=(|\boldsymbol{\xi}+\boldsymbol{\eta}_u|-|\boldsymbol{\xi}|)/|\boldsymbol{\xi}|$
+(with $\boldsymbol{\eta}_u$ the relative displacement) exceeds the
+critical value calibrated from the energy release rate $G_c$:
+\begin{equation}
+  s_{cr}=
+  \begin{cases}
+    \sqrt{\dfrac{4\pi G_c}{9 E \delta}} & \text{plane stress},\\[8pt]
+    \sqrt{\dfrac{5\pi G_c}{12 E \delta}} & \text{plane strain},\\[8pt]
+    \sqrt{\dfrac{5 G_c}{6 E \delta}} & \text{3-D},
+  \end{cases}
+  \label{eq:scr}
+\end{equation}
+With \code{"tension\_only": true} only tensile stretches
+($s>s_{cr}$) break bonds; with \code{false} compressive bonds break
+too ($|s|>s_{cr}$). Bond failure is irreversible. With variable
+horizons the bond uses $\delta_b=\tfrac12(\delta_i+\delta_j)$ in
+\eqref{eq:scr}. The nodal \code{damage} projection is
+\begin{equation}
+  d_i = 1-\frac{\text{intact bonds of } i}{\text{family size of } i}
+  \in [0,1].
+\end{equation}
+
+\subsection{\code{pddo\_dynamic\_frac} -- implicit dynamic fracture}
+\label{sec:pddofrac}
+
+Solves $\rho\,\ddot{\mathbf u} = \mathbf{L}(\mathbf u)$ (no body
+force in the public kernel) with an implicit backward-Euler
+integrator embedded in the residual:
+\begin{equation}
+  \mathbf R_i = \mathbf L(\mathbf u)\big|_i
+  - \rho\,
+  \frac{\mathbf u_i-\mathbf u_i^{n-1}-\mathbf v_i^{n-1}\Delta t}
+       {\Delta t^{2}} ,
+\end{equation}
+which Newton drives to zero each step; on convergence the velocity
+is committed as
+$\mathbf v^{n}=(\mathbf u^{n}-\mathbf u^{n-1})/\Delta t$. Bond
+failure is evaluated once per \emph{converged} step on the
+committed displacement (never inside the Newton loop), so the
+tangent stays consistent within a step.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{pddo\_dynamic\_frac} / \code{explicit\_pddo\_frac} parameters.}
+\label{tab:fracparams}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Constraint} & \textbf{Meaning} \\
+\midrule
+\code{E}   & number & $>0$, required & Young's modulus \\
+\code{nu}  & number & $\in(-1,0.5)$, required & Poisson's ratio \\
+\code{rho} & number & $>0$, required & mass density \\
+\code{Gc} / \code{G0} & number & $>0$, exactly one & critical energy release rate (alias pair) \\
+\code{state} & string & required in 2-D, rejected in 3-D & \code{"plane\_stress"} or \code{"plane\_strain"} \\
+\code{tension\_only} & bool & required & break bonds only in tension \\
+\code{damage} & bool & required & master switch for bond breaking \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Projections:} \code{strain}, \code{stress}
+(symmetric tensors, computed from PDDO displacement gradients and
+the elastic law), \code{vonMises} (scalar), \code{damage}
+(scalar).
+
+\subsection{\code{explicit\_pddo\_frac} -- explicit dynamic fracture}
+\label{sec:explicit}
+
+The same physics as Section~\ref{sec:pddofrac} integrated with the
+central-difference scheme
+\begin{equation}
+  \mathbf u^{n+1} = 2\mathbf u^{n}-\mathbf u^{n-1}
+  + \Delta t^{2}\,
+  \frac{\mathbf L(\mathbf u^{n})}{\rho}.
+\end{equation}
+No linear system is ever assembled -- the input must not contain
+\code{LinearSolver} or \code{NonlinearSolver} blocks, and
+\code{pdtraction} boundary conditions are rejected
+(Section~\ref{sec:crossrules}). Parameters are identical to
+Table~\ref{tab:fracparams}. Additional characteristics:
+
+\begin{itemize}[nosep]
+  \item \textbf{Stability.} The step must satisfy a CFL-type bound;
+        the kernel estimates
+        $\Delta t \lesssim \Delta x/\sqrt{C_{11}/\rho}$ from the
+        grid spacing and warns when exceeded.
+  \item \textbf{Velocity ICs.} \code{"field": "velocity"} initial
+        conditions are supported (only by this kernel) and seed the
+        $\mathbf u^{-1}$ history so the first step moves with the
+        prescribed velocity.
+  \item \textbf{Damage update.} Bond breaking is evaluated every
+        step on the current displacement.
+  \item \textbf{Performance.} Per-bond operator weights are cached
+        in flat compressed arrays at start-up (with an overflow
+        guard for clouds beyond $2^{31}$ bonds). When compiled with
+        \code{CUDA\_ASSEMBLE} and \code{"assemble": "cuda"}, the
+        bond loop runs on the GPU; if the GPU path fails it falls
+        back to the CPU \emph{permanently} for the rest of the run,
+        so the irreversible damage state never diverges between the
+        two code paths.
+\end{itemize}
+
+\noindent\textbf{Projections:} \code{damage}, \code{vonMises},
+\code{stress}, \code{strain}.
+
+\subsection{\code{stress\_cahnhilliard} -- chemo-mechanics}
+\label{sec:sch}
+
+Couples Cahn--Hilliard transport (Section~\ref{sec:ch}) to linear
+elasticity through the composition eigenstrain
+$\boldsymbol\varepsilon^{\mathrm{ch}}=\frac{\Omega}{3}(c-c_{\mathrm{ref}})\mathbf I$
+and the hydrostatic-stress term in the chemical potential:
+\begin{align}
+  \frac{\partial c}{\partial t}
+    &= \Div\!\bigl[M(c)\,\Grad\mu\bigr],
+    \qquad M(c)=D\,c(1-c),\\
+  \mu &= \ln\frac{c}{1-c}+\chi(1-2c)
+        -\Omega\,\sigma_h - \kappa\Lap c,\\
+  \boldsymbol\sigma &= \mathbb C :
+    \bigl(\boldsymbol\varepsilon-\boldsymbol\varepsilon^{\mathrm{ch}}\bigr),
+  \qquad
+  \Div\boldsymbol\sigma = \rho\,\ddot{\mathbf u}
+  \;\;(\text{or } \mathbf 0 \text{ if } \rho = 0).
+\end{align}
+The hydrostatic stress is evaluated in closed form,
+\begin{equation}
+  \sigma_h = K_h\,\operatorname{tr}\boldsymbol\varepsilon
+           + C_h\,(c-c_{\mathrm{ref}}),
+\end{equation}
+with coefficients that depend on the plane reduction:
+\begin{equation}
+  \begin{aligned}
+  \text{plane stress:}\quad
+    & A=\frac{E\,\Omega}{3(1-\nu)}, &
+    K_h&=\frac{C_{11}+C_{12}}{3}, &
+    C_h&=-\frac{2A}{3},\\
+  \text{plane strain / 3-D:}\quad
+    & A=\frac{E\,\Omega}{3(1-2\nu)}, &
+    K_h&=\frac{C_{11}+2C_{12}}{3}=K, &
+    C_h&=-A,
+  \end{aligned}
+  \label{eq:sigmah}
+\end{equation}
+where $A$ is also the eigenstress modulus that enters the momentum
+residual as the body-force-like term $-A\,\Grad c$. The species
+transport uses the same conservative antisymmetric flux, ghost-bond
+exclusion and Laplacian calibration as the plain Cahn--Hilliard
+kernel. With $\rho>0$ a backward-Euler inertia term is added to the
+momentum residual exactly as in Section~\ref{sec:pddofrac}; with
+$\rho=0$ (or omitted) the mechanics are quasi-static and the
+displacements must be pinned somewhere to remove rigid-body modes.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{stress\_cahnhilliard} parameters.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Constraint} & \textbf{Meaning} \\
+\midrule
+\code{E}     & number & $>0$, required & Young's modulus \\
+\code{nu}    & number & $\in(-1,0.5)$, required & Poisson's ratio \\
+\code{D}     & number & $>0$, required & mobility scale in $M(c)=D\,c(1-c)$ \\
+\code{Omega} & number & required & partial molar volume $\Omega$ \\
+\code{cref}  & number & required & stress-free reference concentration \\
+\code{chi}   & number & required & Flory interaction parameter \\
+\code{kappa} & number & $>0$, required & gradient-energy coefficient \\
+\code{rho}   & number & $\geq 0$, optional (default 0) & density; $>0$ adds backward-Euler inertia \\
+\code{state} & string & required in 2-D, rejected in 3-D & \code{"plane\_stress"} or \code{"plane\_strain"} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Projections:} \code{strain}, \code{stress},
+\code{vonMises}, \code{sigmaH} ($\sigma_h$), \code{fPrime},
+\code{fDoublePrime}, \code{gradC} ($\Grad c$).
+
+\subsection{\code{frac\_stress\_cahnhilliard} -- chemo-mechanics with fracture}
+\label{sec:fsch}
+
+Extends Section~\ref{sec:sch} with critical-stretch bond breaking.
+The design principle: \emph{damage degrades mechanics only}. Bond
+health $\mu_{ij}$ multiplies
+
+\begin{itemize}[nosep]
+  \item the elastic stiffness contributions \eqref{eq:navier},
+  \item the eigenstress body force $-A\,\Grad c$, and
+  \item the $\Omega K_h \Div\mathbf u$ mechanical-coupling term in
+        the $\mu$-equation,
+\end{itemize}
+
+while species diffusion and the $\kappa$ interface term are
+\emph{never} degraded -- a cracked region still transports species.
+Two fracture-specific refinements:
+
+\begin{itemize}[nosep]
+  \item \textbf{Swelling-corrected stretch.} The failure criterion
+        uses the elastic part of the bond stretch,
+        \begin{equation}
+          s_{\mathrm{el}} = s - \frac{\Omega}{3}
+          \bigl(\bar c_{ij}-c_{\mathrm{ref}}\bigr),\qquad
+          \bar c_{ij}=\tfrac12(c_i+c_j),
+        \end{equation}
+        so homogeneous swelling does not spuriously break bonds.
+  \item \textbf{Residual stiffness.} A node whose bonds have all
+        failed would leave a singular block in the Jacobian; the
+        stiffness gate is therefore
+        $g_{\mathrm{eff}}=\max(\mu_{ij},\,k_{\mathrm{res}})$
+        applied through the \code{residual\_stiffness} floor
+        $k_{\mathrm{res}}\in(0,1]$ (default $10^{-8}$).
+\end{itemize}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{frac\_stress\_cahnhilliard} parameters (in addition
+to every key of \code{stress\_cahnhilliard}; here \code{rho} is
+\emph{required}).}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Constraint} & \textbf{Meaning} \\
+\midrule
+\code{rho}  & number & $\geq 0$, \emph{required} & 0: quasi-static (pin rigid modes!); $>0$: backward-Euler inertia \\
+\code{Gc} / \code{G0} & number & $>0$, exactly one & critical energy release rate (alias pair) \\
+\code{tension\_only} & bool & required & break bonds only in tension \\
+\code{damage\_on} / \code{damage} & bool & exactly one & master switch for bond breaking (alias pair) \\
+\code{residual\_stiffness} & number & $\in(0,1]$, default $10^{-8}$ & stiffness floor for fully severed nodes \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Projections:} those of
+\code{stress\_cahnhilliard} plus \code{damage}.
+
+%==================================================================
+\section{Boundary Conditions}
+\label{sec:bc}
+%==================================================================
+
+\subsection{The \code{BCSystem} block}
+
+\code{BCSystem} is a non-empty object; every entry is one boundary
+condition, named by a free label. Each entry requires \code{type}
+(one of \code{dirichlet}, \code{neumann}, \code{speciesflux},
+\code{pdtraction}, \code{sdtraction}) and \code{phygroup} -- the
+node group it acts on (Section~\ref{sec:ghost}). In a nonlocal
+method a ``boundary condition'' is a recipe for filling the rows of
+the fictitious ghost points, so \code{phygroup} is usually a
+\code{*nodes\_ghost} group.
+
+Two run-time safety nets complement the schema: a Dirichlet
+condition that pins a Cahn--Hilliard species DoF (\code{c} or
+\code{mu}) on boundary ghosts is rejected (the species flux drops
+ghost bonds, so such a pin is inert and would silently seal the
+domain), and any ghost wall left without \emph{any} boundary
+condition is reported at start-up, because unconstrained one-sided
+PD rows are the most common cause of solver failure on refined
+meshes.
+
+\subsection{\code{dirichlet} -- essential conditions}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{dirichlet} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning} \\
+\midrule
+\code{phygroup} & string & required & target node group \\
+\code{dofs}  & array & required & non-empty list of declared DoF names \\
+\code{value} & number or array & required & prescribed value $g_0$; an array must match \code{dofs} in length \\
+\code{velocity} & number or array & 0 & ramp rate: $g(t)=g_0+\dot g\,t$ \\
+\code{box} & object & none & axis-aligned filter \code{\{xmin,xmax,ymin,ymax,zmin,zmax\}}; only nodes inside all given bounds are affected (a selection that matches no node warns once) \\
+\code{direct} & bool & \code{false} & force direct pinning (see below) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+On a ghost group the default is the \emph{mirror (reflection)}
+form: for each ghost $g$ with mirror bulk partner $b$ the row
+enforces
+\begin{equation}
+  u_g + u_b = 2\,g(t)
+  \qquad\Longleftrightarrow\qquad
+  u\big|_{\text{wall}} = g(t),
+\end{equation}
+i.e.\ the wall value midway between ghost and bulk equals the
+prescribed value exactly, second-order accurately. With
+\code{"direct": true}, on non-ghost groups, or for ghosts without a
+mirror partner, the row degenerates to the direct pin
+$u_g=g(t)$. Row replacement scales the unit diagonal to the mean
+magnitude of the matrix diagonal, preserving the conditioning of
+the assembled system.
+
+\subsection{\code{neumann} -- homogeneous natural conditions}
+
+Keys: \code{phygroup}, \code{dofs}, \code{value} -- and the value
+\emph{must be zero} (scalar 0 or an all-zero array); the public
+generic Neumann condition is homogeneous. It enforces the
+zero-normal-gradient mirror $u_g=u_b$. For inhomogeneous loads use
+\code{pdtraction}/\code{sdtraction} (mechanics) or
+\code{speciesflux} (species transport).
+
+\subsection{\code{speciesflux} -- prescribed species influx}
+
+Keys: \code{phygroup}, \code{dofs} (must be exactly
+\code{["c"]}), \code{value} (the flux $j$). Requires a species
+kernel. The implementation is a \emph{source form}: the ghost row
+keeps the zero-gradient mirror $c_g=c_b$ (so the PDDO family of the
+wall sees no artificial gradient), and the flux enters the
+mass balance of the near-wall \emph{bulk} row as a source
+\begin{equation}
+  R_b \mathrel{-}= \frac{j}{h},
+\end{equation}
+where $h$ is the wall-layer thickness (cell volume divided by face
+area where available, otherwise the ghost--bulk distance).
+Positive \code{value} means influx: the total species content
+grows at exactly $j$ per unit wall area and time.
+
+\subsection{\code{pdtraction} and \code{sdtraction} -- strong-form tractions}
+
+These conditions replace the ghost rows with the strong-form
+traction statement
+\begin{equation}
+  \boldsymbol\sigma(\mathbf x_w)\cdot\mathbf n = \bar{\mathbf t},
+  \qquad
+  \boldsymbol\sigma=\mathbb C:\boldsymbol\varepsilon
+  \;-\;
+  \underbrace{A\,(c-c_{\mathrm{ref}})\,\mathbf I}_{\text{\code{sdtraction} only}},
+\end{equation}
+built from the PDDO first-derivative operators of the ghost point;
+$\mathbf n$ is the dominant-axis outward normal of the wall. They
+require an assembled linear system and are therefore invalid with
+the explicit kernel. \code{pdtraction} is the purely mechanical
+form; \code{sdtraction} additionally subtracts the swelling
+eigenstress, which is the correct traction-free condition for the
+chemo-mechanical kernels.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{pdtraction} / \code{sdtraction} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{pdtraction} & \textbf{sdtraction} \\
+\midrule
+\code{phygroup} & string & required & required \\
+\code{E}, \code{nu} & numbers & required ($E>0$, $\nu\in(-1,0.5)$) & same \\
+\code{state} & string & required in 2-D & optional in 2-D (default \code{plane\_stress}); rejected in 3-D for both \\
+\code{value} & array[dim] & required & optional (default zero traction) \\
+\code{dofs} & array & \multicolumn{2}{l}{optional, but \emph{required} for the coupled kernels; must be \code{["ux","uy"(,"uz")]}}\\
+\code{Omega} & number & \multicolumn{2}{l}{chemical coupling: \code{pdtraction} needs \code{Omega}+\code{cref}+\code{c\_dof} together;}\\
+\code{cref} & number & \multicolumn{2}{l}{\quad \code{sdtraction} needs \code{Omega} only (\code{cref} defaults to 0, \code{c\_dof} to \code{"c"})}\\
+\code{c\_dof} & string & \multicolumn{2}{l}{must name the declared concentration field \code{"c"}}\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The elastic constants of the traction condition are given
+explicitly (\code{E}, \code{nu}, \code{state}) so the boundary
+operator is self-contained; in practice they repeat the element
+parameters.
+
+%==================================================================
+\section{Initial Conditions}
+\label{sec:ic}
+%==================================================================
+
+\code{ICSystem} is a non-empty object of named entries. Every entry
+requires \code{type} and targets either one DoF (\code{"dof":
+"c"}) or several (\code{"dofs": [...]}) -- exactly one of the two
+spellings. Common optional keys:
+
+\begin{itemize}[nosep]
+  \item \code{field}: \code{"solution"} (default) or
+        \code{"velocity"}; velocity ICs are accepted only with
+        \code{explicit\_pddo\_frac};
+  \item \code{phygroup}: restrict to a node group (default: all
+        bulk nodes).
+\end{itemize}
+
+Entries are applied in declaration order; later entries overwrite
+earlier ones on overlapping nodes. Keys of kind ``scalar or
+array'' accept one number (applied to every listed DoF) or an
+array matching \code{dofs} in length.
+
+\begin{table}[htbp]
+\centering
+\caption{IC generators. ``s/a'' = scalar or per-DoF array.}
+\label{tab:ics}
+\footnotesize
+\begin{tabularx}{\textwidth}{l>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{\code{type}} & \textbf{Keys} & \textbf{Field value at $\mathbf x$} \\
+\midrule
+\code{constant} & \code{value} (s/a) & $v$ \\
+\code{linear} & \code{offset} (s/a, required), \code{slope\_x}, \code{slope\_y}, \code{slope\_z} (s/a, default 0) & $v_0+s_x x+s_y y+s_z z$ \\
+\code{box} & \code{min\_corner}, \code{max\_corner} (2--3 numbers, min $\leq$ max), \code{inside\_values}, \code{outside\_values} (s/a) & inside value within the box, outside value elsewhere \\
+\code{circle} & \code{center} (2--3 numbers), \code{radius} ($>0$), \code{dr} ($\geq 0$, required), \code{inside\_values}, \code{outside\_values} & disc (2-D) / sphere (3-D); $dr=0$ hard step, $dr>0$ blends inside $\to$ outside over [\code{radius}, \code{radius}$+dr$] with a $C^1$ cubic \\
+\code{ellipse} & \code{center}, \code{semi\_axes} ($>0$ each), \code{inside\_values}, \code{outside\_values}, \code{smoothness} ($\geq 0$, default 0) & ellipse (ellipsoid) indicator; \code{smoothness} $=0$ hard step, $>0$ a $\tanh$ blend across the level set \\
+\code{gaussian} & \code{center}, \code{sigma} ($>0$ each, per axis), \code{amplitude} (s/a), \code{offset} (s/a, default 0) & $v_0 + a\exp\bigl[-\sum_k (x_k-\mu_k)^2/(2\sigma_k^2)\bigr]$ \\
+\code{cosine} & \code{wavenumber} (per axis), \code{phase} (per axis, default 0), \code{amplitude} (s/a), \code{offset} (s/a) & $v_0 + a\prod_k \cos(k_k x_k + \varphi_k)$ \\
+\code{random} & \code{min}, \code{max} (min $<$ max), \code{seed} (required, non-negative integer) & i.i.d.\ uniform values in $[\min,\max]$ from a seeded \code{mt19937\_64} -- runs are bit-reproducible \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+A typical spinodal-decomposition start is a seeded random
+perturbation about the mean composition:
+
+\begin{lstlisting}[language=json]
+"ICSystem": {
+  "noise": { "type": "random", "dof": "c",
+             "min": 0.49, "max": 0.51, "seed": 12345 }
+}
+\end{lstlisting}
+
+%==================================================================
+\section{Job Control, Time Stepping and Solvers}
+%==================================================================
+
+\subsection{\code{JobSystem}}
+\label{sec:job}
+
+Optional; when omitted the job is static with serial assembly. When
+present, \code{type} is required.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{JobSystem} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning} \\
+\midrule
+\code{type} & string & \code{"static"} & \code{"static"} (one solve) or \code{"transient"} (time loop; requires \code{TimeStepping}) \\
+\code{assemble} & string & \code{"serial"} & \code{"serial"}, \code{"openmp"} (needs \code{PARALLEL\_ASSEMBLE}; thread count from \code{OMP\_NUM\_THREADS}) or \code{"cuda"} (needs \code{CUDA\_ASSEMBLE}) \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Run drivers}
+
+The problem driver picks one of four run modes:
+
+\begin{itemize}[nosep]
+  \item \textbf{static} + implicit kernel: a single Newton solve,
+        then one result save;
+  \item \textbf{transient} + implicit kernel: the backward-Euler
+        time loop of Section~\ref{sec:ts}, one Newton solve per
+        step;
+  \item \textbf{transient} + \code{explicit\_pddo\_frac}: the
+        matrix-free central-difference loop
+        (Section~\ref{sec:explicit});
+  \item quasi-static matrix-free problems use an ADR
+        (adaptive dynamic relaxation) driver -- not reachable with
+        the published kernel set, listed for completeness.
+\end{itemize}
+
+\subsection{\code{TimeStepping}}
+\label{sec:ts}
+
+Required for transient jobs, forbidden for static ones.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{TimeStepping} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning} \\
+\midrule
+\code{dt} & number & required & initial (and, non-adaptive, constant) step; $>0$ \\
+\code{total\_time} & number & required & end time; $>0$ \\
+\code{verbose} & bool & \code{true} & per-step progress lines \\
+\code{adaptive} & bool & \code{false} & enable adaptive step control \\
+\code{optimal\_iters} & int & 5 & Newton-iteration target of the controller; $\geq 1$ \\
+\code{growth\_factor} & number & 1.25 & step multiplier after an easy step; $\geq 1$ \\
+\code{cutback\_factor} & number & 0.5 & step multiplier after a failed step; $\in(0,1)$ \\
+\code{max\_cutbacks} & int & 4 & retries per step before giving up; $\geq 0$ \\
+\code{min\_dt} & number & 0 & lower bound on the step \\
+\code{max\_dt} & number & 0 & upper bound; 0 means ``capped at the initial \code{dt}'' \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The adaptive controller works per step: if Newton \emph{fails}, the
+step is retried with $\Delta t \leftarrow \Delta t\cdot
+\text{cutback\_factor}$, up to \code{max\_cutbacks} times, then the
+run aborts. If Newton \emph{converges}, the next step grows by
+\code{growth\_factor} when the iteration count was at most
+\code{optimal\_iters} and shrinks by \code{cutback\_factor}
+otherwise, always clamped to $[\text{min\_dt},\text{max\_dt}]$.
+The last step is shortened to land exactly on
+\code{total\_time}.
+
+\subsection{\code{NonlinearSolver}}
+\label{sec:newton}
+
+Newton's method without line search: assemble
+$\mathbf K\,\Delta\mathbf U=-\mathbf R$, apply boundary conditions,
+solve, update $\mathbf U\mathrel{+}=\Delta\mathbf U$. Convergence
+when $\lVert\mathbf R\rVert<\text{abs\_tol}$ or
+$\lVert\mathbf R\rVert\le\text{rel\_tol}\cdot
+\lVert\mathbf R_0\rVert$.
+
+\begin{table}[htbp]
+\centering
+\caption{\code{NonlinearSolver} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning} \\
+\midrule
+\code{max\_iters} & int & 50 & maximum Newton iterations per solve; $\geq 1$ \\
+\code{abs\_tol} & number & $10^{-9}$ & absolute residual-norm tolerance; $>0$ \\
+\code{rel\_tol} & number & $10^{-12}$ & relative residual-norm tolerance; $>0$ \\
+\code{verbose} & bool & \code{true} & per-iteration residual lines \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{\code{LinearSolver}}
+\label{sec:linsolver}
+
+\begin{table}[htbp]
+\centering
+\caption{Linear solver backends. Only the listed \code{params} keys
+are public; anything else is rejected.}
+\footnotesize
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+\textbf{\code{type}} & \textbf{Availability} & \textbf{Description and \code{params}} \\
+\midrule
+\code{default} & always & built-in direct profile (skyline) LDU factorisation without pivoting, with reverse Cuthill--McKee reordering to compress the profile. No parameters (\code{params} must be empty/omitted). \\
+\code{pardiso} & \code{USE\_ONEAPI} builds & Intel MKL PARDISO sparse direct solver. Params: \code{msglvl} (int $\geq 0$, default 0) -- PARDISO statistics verbosity. \\
+\code{cudss} & \code{USE\_CUDSS} builds & NVIDIA cuDSS sparse direct solver on the GPU. No public parameters. \\
+\code{amgcl} & \code{USE\_AMGCL} builds & AMGCL BiCGSTAB with a preconditioner ladder (see below). Params: \code{tol} ($>0$, default $10^{-10}$), \code{maxiter} (int $\geq 1$, default 200), \code{verbose} (bool, default \code{false}), \code{iluk\_level} (int 1--6, default 2), \code{solver\_threads} (int $\geq 0$, default 0 = automatic). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The block itself is optional (the built-in direct solver is the
+default). The AMGCL backend detects the block size (1--5 coupled
+DoFs per node) automatically and climbs a preconditioner ladder --
+AMG-with-ILU(0) relaxation first, plain ILU(0) next, ILU($k$) with
+\code{iluk\_level} fill last -- restarting the Krylov solve when a
+cheaper preconditioner stalls. Requesting \code{pardiso},
+\code{cudss} or \code{amgcl} in a binary compiled without the
+corresponding CMake option is a start-up error.
+
+%==================================================================
+\section{Output System}
+\label{sec:output}
+%==================================================================
+
+\subsection{The \code{OutputSystem} block}
+
+\begin{table}[htbp]
+\centering
+\caption{\code{OutputSystem} keys.}
+\footnotesize
+\begin{tabularx}{\textwidth}{lllX}
+\toprule
+\textbf{Key} & \textbf{Type} & \textbf{Default} & \textbf{Meaning} \\
+\midrule
+\code{interval} & int & 1 & save every $n$-th step ($\geq 1$); step 0 and the final step are always saved \\
+\code{Fields} & array & \code{[]} & projection names to write in addition to the solution; duplicates are rejected; \code{"solution"} is accepted and ignored (the solution is always written); a name no kernel provides is a fatal error \\
+\code{format} & string & \code{"vtu"} & \code{"vtu"}, \code{"exodus"} or \code{"both"} \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Static jobs save once after the solve. The available projection
+names per kernel are listed in Section~\ref{sec:elmt}; vector and
+tensor projections are written with their natural number of
+components.
+
+\subsection{VTK output}
+
+Two files (per saved step) plus their ParaView index:
+
+\begin{itemize}[nosep]
+  \item \code{<stem>-PD-results[-NNNNN].vtu}: the PD point cloud as
+        vertex cells, with point data \code{ElmtID}, one scalar per
+        DoF (canonical names \code{u}, \code{c}, \code{mu},
+        \code{ux}, \ldots) and the requested projections;
+  \item \code{<stem>-Element-results[-NNNNN].vtu}: the background
+        mesh with the same data as cell data (one PD point per
+        cell), convenient for contour plots;
+  \item \code{<stem>-PD-results.pvd} /
+        \code{<stem>-Element-results.pvd}: time-series indexes,
+        rewritten at every save so a running simulation can be
+        opened at any moment.
+\end{itemize}
+
+Transient file names carry a five-digit zero-padded step counter;
+static results have no counter.
+
+\subsection{ExodusII output}
+
+With \code{"format": "exodus"} (or \code{"both"}) \PeriX{} writes
+\code{<stem>.e} -- a self-contained ExodusII database in CDF-2
+format produced by the built-in writer; \emph{no} NetCDF or SEACAS
+libraries are needed at build or run time. The mesh is written once
+with the proper element types (\code{BAR2}, \code{TRI3},
+\code{QUAD4}, \code{TETRA4}, \code{HEX8}); every save appends a
+time plane with strictly increasing times. Each DoF becomes an
+element variable under its canonical name; multi-component
+projections are split into \code{name\_1}, \code{name\_2}, \ldots{}
+components.
+
+%==================================================================
+\section{Worked Examples}
+\label{sec:examples}
+%==================================================================
+
+The \code{examples/} directory holds eleven decks covering every
+kernel, every mesh type, every solver backend and both assembly
+accelerators. Each deck is schema-validated by the test suite.
+Run any of them with
+
+\begin{lstlisting}[language=bash]
+cd examples
+../build/perix -i poisson.json
+\end{lstlisting}
+
+\subsection{\code{poisson.json} -- steady conduction}
+
+A $1000\times1000$ unit square ($10^6$ PD points), horizon factor
+3.0, order 2, conductivity $\sigma=1$, no source. Dirichlet walls
+$u=0$ (left) and $u=1$ (right) through the mirror form on the ghost
+groups; top and bottom carry no condition. OpenMP assembly, PARDISO
+solver, one static solve. The complete deck:
+
+\begin{lstlisting}[language=json]
+{
+  "Mesh":   { "type": "perix", "dim": 2, "xmax": 1.0, "ymax": 1.0,
+              "nx": 1000, "ny": 1000, "meshtype": "quad4",
+              "savemesh": false },
+  "PDMesh": { "HorizonRadiusFactor": 3.0, "Order": 2 },
+  "DOFs":   [ "u" ],
+  "ElmtSystem": {
+    "poisson": { "type": "poisson",
+                 "params": { "sigma": 1.0, "f": 0.0 } }
+  },
+  "BCSystem": {
+    "left":  { "type": "dirichlet", "phygroup": "leftnodes_ghost",
+               "dofs": ["u"], "value": 0.0 },
+    "right": { "type": "dirichlet", "phygroup": "rightnodes_ghost",
+               "dofs": ["u"], "value": 1.0 }
+  },
+  "JobSystem":    { "type": "static", "assemble": "openmp" },
+  "LinearSolver": { "type": "pardiso" }
+}
+\end{lstlisting}
+
+The solution is the linear ramp $u=x$; a useful first check of any
+build.
+
+\subsection{\code{poisson\_amgcl.json} and \code{poisson\_gpu.json}}
+
+The same physics on a $50\times50$ grid, demonstrating the optional
+backends: \code{poisson\_amgcl.json} solves with
+\code{"type": "amgcl"} (\code{tol} $10^{-10}$, \code{maxiter} 200)
+and serial assembly; \code{poisson\_gpu.json} uses
+\code{"assemble": "cuda"} with the \code{cudss} direct solver.
+They require binaries configured with \code{USE\_AMGCL} and
+\code{CUDA\_ASSEMBLE}+\code{USE\_CUDSS} respectively.
+
+\subsection{\code{diffusion.json} -- transient diffusion}
+
+A $500\times500$ unit square, $D=0.01$, $c$ initially zero,
+Dirichlet $c=1$ at the bottom wall and $c=0$ at the top, zero-flux
+Neumann on the sides. Backward Euler with fixed
+$\Delta t=0.5$ to $t=50$; results every 10 steps. The concentration
+front diffuses upward towards the steady linear profile.
+
+\subsection{\code{spinodal.json} -- Cahn--Hilliard phase separation}
+
+A $250\times250$ unit square with $\chi=3$ (deep quench),
+$\kappa=10^{-3}$, $M_0=1$. The initial state is the seeded random
+perturbation $c\in[0.49,0.51]$ (\code{seed} 12345, bit-reproducible)
+with $\mu=0$; all four walls are homogeneous Neumann. The adaptive
+controller (initial $\Delta t=10^{-3}$, \code{optimal\_iters} 10,
+growth 1.2, cutback 0.5, \code{max\_cutbacks} 6, $\Delta t$
+clamped to $[10^{-4},1]$) rides the stiffness of early spinodal
+decomposition and accelerates through late-stage coarsening to
+$t=100$. Fields \code{fPrime} and \code{fDoublePrime} are written
+every 20 steps; total mass $\sum_i V_i c_i$ is conserved to solver
+tolerance.
+
+\subsection{\code{kalthoff\_winkler.json} -- explicit dynamic fracture}
+
+The classic Kalthoff--Winkler impact test: a pre-notched steel
+plate (Gmsh mesh \code{impact2D.msh}) struck between the notches.
+Maraging-steel parameters $E=190\,$GPa, $\nu=0.25$,
+$\rho=7800\,$kg/m$^3$, $G_0=69\,000\,$J/m$^2$, plane stress,
+tension-only failure. The two notches are explicit \code{Cracks}
+segments at $x=0.075$ and $x=0.125$ (from $y=0.05$ to $y=0.1$) with
+\code{force\_only} treatment. The impactor region
+(\code{impactnodes\_ghost}) is driven by a direct Dirichlet
+condition with \code{velocity} $[0,-22]$\,m/s; the remaining
+boundary (\code{freenodes\_ghost}) is traction-free via
+homogeneous Neumann. Central-difference integration with
+$\Delta t=10^{-8}\,$s to $t=10^{-4}\,$s; \code{damage},
+\code{vonMises} and \code{stress} saved every 1000 steps. The
+simulation reproduces the experimentally observed crack branches at
+roughly $70^\circ$ to the notch line.
+
+\code{kalthoff\_winkler\_gpu.json} is the same deck with
+\code{"assemble": "cuda"} -- the entire bond loop runs on the GPU.
+
+\subsection{\code{kalthoff\_winkler\_3D.json} -- 3-D explicit fracture}
+
+The 3-D extension on \code{impact3D.msh} with DoFs
+\code{ux},\code{uy},\code{uz} and \code{Gc} spelled directly
+(no \code{state} in 3-D). The notches are \code{center\_crack}
+presets with \code{normal} $[1,0,0]$, \code{length} 0.05 and
+\code{width} 0.009 -- planar cracks through the plate thickness.
+The out-of-plane displacement \code{uz} is pinned on
+\code{alldomain} to keep the thin plate in a plane-strain-like
+state, and the impactor drives \code{velocity} $[0,-22,0]$.
+$\Delta t=5\times10^{-8}\,$s, output every 100 steps.
+
+\subsection{\code{tensile\_plate.json} -- implicit quasi-static fracture}
+
+A $1\times0.4$ plate (300$\times$120 cells) with an edge crack from
+$(0,0.2)$ to $(0.5,0.2)$, loaded by \code{pdtraction} conditions:
+$\pm0.0153884$ vertical traction on the top/bottom walls and
+traction-free left/right walls (all with $E=79.1403$,
+$\nu=0.333$, plane stress -- a normalised material set,
+$\rho=268.198$, $G_c=1.48388\times10^{-6}$). Note that the traction
+conditions address the \emph{bulk} wall groups
+(\code{topnodes}, \ldots); the condition automatically maps each
+bulk node to its mirror ghost and writes the traction rows there.
+The implicit \code{pddo\_dynamic\_frac} kernel advances with the
+adaptive controller ($\Delta t$ from $10^{-3}$ in $[10^{-4},10^{-2}]$,
+growth 1.2, cutback 0.5) to $t=5$; the crack propagates across the
+ligament and the plate tears in two.
+
+\subsection{\code{silicon.json} -- lithiation of a silicon disc}
+
+Stress-assisted Cahn--Hilliard on the \code{circle} mesh
+(radius 1, 400 layers, \code{VariableHorizon} on): a normalised
+model of Li insertion into an amorphous-Si particle. Parameters
+$E=87.9336$, $\nu=0.29$, $D=10^{-4}$, $\Omega=3$,
+$c_{\mathrm{ref}}=0$, $\chi=2.6$,
+$\kappa=2.19834\times10^{-6}$, $\rho=2.41817\times10^{-22}$
+(inertia negligible but nonzero), plane stress. Boundary
+conditions on the rim (\code{outernodes\_ghost}): a constant
+species influx $j=0.013889$ (\code{speciesflux}), zero-gradient
+\code{mu}, and a swelling-aware traction-free surface
+(\code{sdtraction} with the same $E,\nu,\Omega$). A small box
+around the centre pins \code{ux},\code{uy} to remove rigid-body
+modes. Adaptive stepping to $t=30$; \code{stress} and
+\code{sigmaH} written every 50 steps. The concentration front
+sweeps inward while the core is pushed into hydrostatic
+compression -- the classical two-phase lithiation picture.
+
+\subsection{\code{silicon\_frac.json} -- lithiation with a pre-crack}
+
+The fracture variant: \code{frac\_stress\_cahnhilliard} with
+$G_c=0.010662$, \code{tension\_only} true, faster transport
+($D=0.03$) and a radial pre-crack from $(-2,0)$ to $(-0.5,0)$ --
+the segment reaches beyond the disc so the crack terminates
+exactly at the rim. With \code{"damage\_on": false} the bond
+network stays frozen: the deck isolates the effect of the
+pre-crack (stress concentration, locally re-routed swelling
+stresses) from crack \emph{growth}, which can be enabled by
+flipping the switch to \code{true}.
+
+%==================================================================
+\section{Testing}
+%==================================================================
+
+The test tree registers 29 CTest cases under four (overlapping)
+labels:
+
+\begin{itemize}[nosep]
+  \item \textbf{unit} (17 tests): one test executable per
+        subsystem -- every element kernel, the BC/IC systems, the
+        circle-mesh anchor, the Exodus writer, initial velocities,
+        the job system, \code{MeshModify}, the output system, the
+        input schema, and the AMGCL solver components;
+  \item \textbf{examples} (13): the input-schema suite plus a
+        \code{ReadOnly\_<deck>} validation of each of the eleven
+        bundled decks (\code{perix -i deck --read-only}), so every
+        shipped input is guaranteed to parse and validate;
+  \item \textbf{integration} (1): \code{Run\_poisson\_amgcl}, a
+        full end-to-end solve of the AMGCL Poisson deck with
+        checked results;
+  \item \textbf{amgcl} (2): the AMGCL unit suite and the
+        end-to-end run (present only in \code{USE\_AMGCL} builds).
+\end{itemize}
+
+\begin{lstlisting}[language=bash]
+cd build && ctest -j 16 --output-on-failure
+\end{lstlisting}
+
+%==================================================================
+\section{License and Citation}
+%==================================================================
+
+\PeriX{} is distributed under the GNU General Public License v3.0.
+The PDDO method is due to Madenci and co-workers; the standard
+references are:
+
+\begin{itemize}[nosep]
+  \item E.~Madenci, A.~Barut, M.~Futch,
+        \emph{Peridynamic differential operator and its
+        applications}, Computer Methods in Applied Mechanics and
+        Engineering 304 (2016) 408--451.
+  \item E.~Madenci, A.~Barut, M.~Dorduncu,
+        \emph{Peridynamic Differential Operator for Numerical
+        Analysis}, Springer, 2019.
+\end{itemize}
+
+Please cite the repository
+(\url{https://github.com/MatMechLab/PeriX}) when using \PeriX{} in
+published work.
+
+\end{document}
