@@ -10,7 +10,7 @@
 		"savemesh": false
 	},
 	"PDMesh": {
-		"HorizonRadiusFactor": 3.0,
+		"HorizonRadiusFactor": 2.5,
 		"Order": 2
 	},
 	"DOFs": [

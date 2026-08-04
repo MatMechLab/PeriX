@@ -6,13 +6,13 @@
 		"xmax": 1,
 		"ymin": 0.0,
 		"ymax": 0.4,
-		"nx": 300,
-		"ny": 120,
+		"nx": 200,
+		"ny": 80,
 		"meshtype": "quad4",
 		"savemesh": false
 	},
 	"PDMesh": {
-		"HorizonRadiusFactor": 3,
+		"HorizonRadiusFactor": 2.5,
 		"Order": 2
 	},
 	"MeshModify": {

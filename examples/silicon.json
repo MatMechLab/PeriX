@@ -11,7 +11,7 @@
     "savemesh": false
   },
   "PDMesh": {
-    "HorizonRadiusFactor": 3,
+    "HorizonRadiusFactor": 2.5,
     "Order": 2,
     "VariableHorizon": true
   },
@@ -101,7 +101,7 @@
   },
   "TimeStepping": {
     "dt": 1e-04,
-    "total_time": 30,
+    "total_time": 36,
     "adaptive": true,
     "optimal_iters": 15,
     "growth_factor": 1.2,
