@@ -410,6 +410,14 @@ geometrically under `Presets`:
   `PERIX_CUDSS_TIMING=1` prints cuDSS transfer/factor/solve timing. Disable
   diagnostic timing for production measurements.
 
+## Funding
+This project is supported by:
+
+- Start up fund of the Great Bay University
+- General Program of Guangdong Natural Science Foundation, 2025-2027
+- Youth Program of the National Natural Science Foundation of China, 2025-2027
+
+  
 ## License
 
 PeriX is licensed under GNU GPLv3; see `LICENSE`. Optional third-party
