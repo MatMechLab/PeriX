@@ -18,9 +18,12 @@
 #include <cmath>
 
 int Circle2DLatticeGenerator::pointsOnShell(const int,const double r_eff,const double dx) const {
-    // capacity = circumference of the shell circle; nearest integer of
-    // capacity/dx points (>=1).
-    return std::max(1,static_cast<int>(std::lround(2.0*kPi*r_eff/dx)));
+    // Raw count: nearest integer of circumference over spacing.
+    const int n0 = std::max(1,static_cast<int>(std::lround(2.0*kPi*r_eff/dx)));
+    // Round to the nearest multiple of 4 so the ring has 4-fold (x/y)
+    // symmetry — points at θ=0,π/2,π,3π/2 always exist.
+    const int n4 = 4 * std::max(1, static_cast<int>(std::lround(static_cast<double>(n0) / 4.0)));
+    return n4;
 }
 
 double Circle2DLatticeGenerator::shellMeasure(const int k,const double dx) const {
@@ -36,12 +39,14 @@ double Circle2DLatticeGenerator::shellMeasure(const int k,const double dx) const
 void Circle2DLatticeGenerator::placeShellPoints(const int,const double r_eff,const int n,
                                                 const std::array<double,3> &c,
                                                 std::vector<std::array<double,3>> &pts) const {
-    // n points evenly spaced on the circle, starting at angle 0 (matches the
-    // reference driver gen_pd_lattice.py: linspace(0,2*pi,n,endpoint=False)).
-    for (int i=0;i<n;i++) {
-        const double theta=2.0*kPi*static_cast<double>(i)/static_cast<double>(n);
-        pts.push_back({c[0]+r_eff*std::cos(theta),
-                       c[1]+r_eff*std::sin(theta),
+    // n points evenly spaced on the circle.  Start at half-step offset
+    // (θ = π/n) so points straddle the x/y axes symmetrically instead of
+    // sitting on them — avoids axis-aligned rows for 4-fold rings.
+    const double dtheta = 2.0 * kPi / static_cast<double>(n);
+    for (int i = 0; i < n; i++) {
+        const double theta = dtheta * (static_cast<double>(i) + 0.5);
+        pts.push_back({c[0] + r_eff * std::cos(theta),
+                       c[1] + r_eff * std::sin(theta),
                        c[2]});
     }
 }
