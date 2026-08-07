@@ -1,14 +1,10 @@
 {
   "Mesh": {
     "type": "circle",
-    "radius": 1.0,
-    "layers": 400,
-    "center": [
-      0.0,
-      0.0,
-      0.0
-    ],
-    "savemesh": false
+		"radius": 1.0,
+		"layers": 400,
+		"center": [0.0, 0.0, 0.0],
+		"savemesh": false
   },
   "PDMesh": {
     "HorizonRadiusFactor": 2.5,
@@ -20,9 +16,27 @@
     "treatment": "force_only",
     "Cracks": [
       {
-        "x1": -2,
+        "x1": 1,
         "y1": 0,
-        "x2": -0.5,
+        "x2": 0.9,
+        "y2": 0
+      },
+      {
+        "x1": 0,
+        "y1": 1,
+        "x2": 0,
+        "y2": 0.9
+      },
+      {
+        "x1": 0,
+        "y1": -1,
+        "x2": 0,
+        "y2": -0.9
+      },
+      {
+        "x1": -1,
+        "y1": 0,
+        "x2": -0.9,
         "y2": 0
       }
     ]
@@ -45,7 +59,7 @@
         "chi": 2.6,
         "rho": 2.41817e-22,
         "kappa": 2.19834e-06,
-        "Gc": 0.010662,
+        "Gc": 0.10662,
         "tension_only": true,
         "damage_on": false,
         "state": "plane_stress"
@@ -96,10 +110,10 @@
       ],
       "value": 0.0,
       "box": {
-        "xmin": -0.0025,
-        "xmax": 0.0025,
-        "ymin": -0.0025,
-        "ymax": 0.0025
+        "xmin": -0.025,
+        "xmax": 0.025,
+        "ymin": -0.025,
+        "ymax": 0.025
       }
     }
   },
@@ -112,26 +126,26 @@
   },
   "JobSystem": {
     "type": "transient",
-    "assemble": "openmp"
+    "assemble": "cuda"
   },
   "TimeStepping": {
-    "dt": 5e-04,
-    "total_time": 2,
+    "dt": 1e-05,
+    "total_time": 7.5,
     "adaptive": true,
-    "optimal_iters": 15,
+    "optimal_iters": 20,
     "growth_factor": 1.2,
     "cutback_factor": 0.5,
     "max_cutbacks": 10,
-    "min_dt": 1e-05,
+    "min_dt": 1e-06,
     "max_dt": 0.01
   },
   "NonlinearSolver": {
-    "max_iters": 25,
+    "max_iters": 30,
     "abs_tol": 1e-06,
     "rel_tol": 1e-06
   },
   "LinearSolver": {
-    "type": "pardiso"
+    "type": "cudss"
   },
   "OutputSystem": {
     "interval": 10,
