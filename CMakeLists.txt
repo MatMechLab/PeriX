@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(PeriX VERSION 0.10 LANGUAGES CXX)
 
+include(GNUInstallDirs)
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 include(PeriXSources)
@@ -35,6 +37,20 @@ perix_configure_solvers(perix_core)
 
 add_executable(perix src/main.cpp)
 target_link_libraries(perix PRIVATE PeriX::core)
+
+install(TARGETS perix
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+)
+install(DIRECTORY examples/
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/perix/examples"
+)
+install(FILES documents/PeriXManual.pdf
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
+)
+install(FILES
+    LICENSE
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}/licenses"
+)
 
 include(CTest)
 if(BUILD_TESTING)

@@ -553,7 +553,12 @@ $V_i^{1/\dim}$.
 
 Generates a 2-D disc of given \code{radius} as \code{layers}
 concentric rings of cells around the centre; ring thickness (and
-hence local point density) is uniform in radius. The outer rim is
+hence local point density) is uniform in radius. Each ring's
+circumference-based point count is rounded to a positive multiple of
+four, and the points are offset by half an angular step. This gives
+fourfold rotational symmetry without placing points directly on the
+coordinate axes. The innermost ring is exposed as the four-point
+group \code{anchornodes}. The outer rim is
 wrapped in ghost points when \code{boundary} is \code{true} (or the
 string \code{"outer"}), producing the groups \code{outernodes}
 (bulk rim) and \code{outernodes\_ghost} (fictitious layer).

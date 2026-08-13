@@ -20,8 +20,8 @@
 int Circle2DLatticeGenerator::pointsOnShell(const int,const double r_eff,const double dx) const {
     // Raw count: nearest integer of circumference over spacing.
     const int n0 = std::max(1,static_cast<int>(std::lround(2.0*kPi*r_eff/dx)));
-    // Round to the nearest multiple of 4 so the ring has 4-fold (x/y)
-    // symmetry — points at θ=0,π/2,π,3π/2 always exist.
+    // Round to the nearest multiple of 4 so the ring is invariant under
+    // quarter-turn rotations about the centre.
     const int n4 = 4 * std::max(1, static_cast<int>(std::lround(static_cast<double>(n0) / 4.0)));
     return n4;
 }

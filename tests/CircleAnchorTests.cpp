@@ -4,6 +4,7 @@
 //****************************************************************
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -52,13 +53,14 @@ int main() {
                    !=meshData.PhyGroupName2BulkElmtIDVecMap.end());
     if (anchorBulkIt
         !=meshData.PhyGroupName2BulkElmtIDVecMap.end()) {
-        expectTrue("innermost shell has three points",
-                   anchorBulkIt->second==std::vector<int>({1,2,3}));
+        expectTrue("innermost shell has four symmetric points",
+                   anchorBulkIt->second==std::vector<int>({1,2,3,4}));
     }
 
     const double innerRadius=0.5*parameters.R/
         static_cast<double>(parameters.N);
-    for (int point=1;point<=3;++point) {
+    std::vector<std::array<double,2>> anchorCoordinates;
+    for (int point=1;point<=4;++point) {
         const double dx=
             meshData.BulkElmtCenters[static_cast<std::size_t>(3*(point-1))]
             -parameters.center[0];
@@ -67,6 +69,20 @@ int main() {
                 static_cast<std::size_t>(3*(point-1)+1)]
             -parameters.center[1];
         expectNear("anchor radius",std::hypot(dx,dy),innerRadius);
+        anchorCoordinates.push_back({dx,dy});
+    }
+    const double component=innerRadius/std::sqrt(2.0);
+    const std::array<std::array<double,2>,4> expectedCoordinates={{
+        { component, component},
+        {-component, component},
+        {-component,-component},
+        { component,-component}
+    }};
+    for (std::size_t point=0;point<expectedCoordinates.size();++point) {
+        expectNear("anchor x quarter-turn position",
+                   anchorCoordinates[point][0],expectedCoordinates[point][0]);
+        expectNear("anchor y quarter-turn position",
+                   anchorCoordinates[point][1],expectedCoordinates[point][1]);
     }
 
     const int bulkPoints=meshData.BulkElmtsNum;
@@ -81,7 +97,7 @@ int main() {
                anchorNodeIt!=pdData.PhyNameToNodeIDsMap.end());
     if (anchorNodeIt!=pdData.PhyNameToNodeIDsMap.end()) {
         expectTrue("anchor maps to material points only",
-                   anchorNodeIt->second==std::vector<int>({1,2,3}));
+                   anchorNodeIt->second==std::vector<int>({1,2,3,4}));
         for (const int node : anchorNodeIt->second) {
             expectTrue("anchor is not a ghost",
                        pdData.GhostMirrorBulkID[

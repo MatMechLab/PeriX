@@ -32,6 +32,11 @@ CPU-only builds. It is not one of the three linear solvers described in the
 current manuscript, which are the in-house profile LDU solver, Intel MKL
 PARDISO, and NVIDIA cuDSS.
 
+The built-in circular lattice rounds each circumference-based ring count to a
+positive multiple of four and uses a half-angular-step offset. Its
+`anchornodes` group is therefore the four symmetric points of the innermost
+ring.
+
 All complete example decks shipped here are two-dimensional. Core mesh,
 operator, and selected element paths contain three-dimensional support, but
 this release does not yet provide a validated end-to-end 3D benchmark.
@@ -420,5 +425,5 @@ This project is supported by:
   
 ## License
 
-PeriX is licensed under GNU GPLv3; see `LICENSE`. Optional third-party
-dependencies retain their own licenses.
+PeriX is licensed under GNU GPLv3; see `LICENSE`. Vendored and optional
+third-party dependencies retain their own licenses.

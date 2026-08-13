@@ -18,12 +18,7 @@
 #include "Utils/ProjectBanner.h"
 #include "PDProblem/PDProblem.h"
 int main(int args,char *argv[]) {
-    const int Year=2026;
-    const int Month=04;
-    const int Day=16;
-    const double Version=0.1;
-
-    ProjectBanner::print(Year,Month,Day,Version);
+    ProjectBanner::print("0.1");
 
     PDProblem problem;
     problem.run(args,argv);

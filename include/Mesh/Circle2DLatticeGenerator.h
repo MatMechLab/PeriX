@@ -19,7 +19,10 @@
 /**
  * 2D disk lattice: layer 0 is the centre disk, layer k>=1 is the ring
  * [(k-0.5)dx,(k+0.5)dx]. The n_k points of a layer sit evenly on the circle of
- * radius r_eff=(k+0.5)dx with n_k=round(2*pi*r_eff/dx).
+ * radius r_eff=(k+0.5)dx. The circumference-based raw count is rounded to
+ * the nearest positive multiple of four, and points are offset by half an
+ * angular step, giving every ring fourfold rotational symmetry without
+ * placing points directly on the coordinate axes.
  */
 class Circle2DLatticeGenerator final : public PDLatticeGeneratorBase {
 protected:

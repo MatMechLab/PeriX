@@ -17,7 +17,8 @@
 //+++   [(k-0.5)dx, (k+0.5)dx]. On each layer the points sit on the
 //+++   sphere of radius r_eff=(k+0.5)dx; the number of points is the
 //+++   nearest integer to (shell "capacity")/dx (perimeter/dx in 2D,
-//+++   surface/dx^2 in 3D), and each point carries the shell measure
+//+++   surface/dx^2 in 3D), subject to a concrete generator's symmetry
+//+++   requirements, and each point carries the shell measure
 //+++   (area/volume) divided by that count as its tributary volume.
 //+++   (see the reference driver gen_pd_lattice.py)
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -63,9 +64,9 @@ protected:
     [[nodiscard]] virtual int dim() const =0;
     [[nodiscard]] virtual const char* shapeName() const =0;
 
-    /** number of points on shell k (mid radius r_eff): the nearest integer to
-     *  the shell "capacity" over the spacing -- perimeter/dx in 2D, sphere
-     *  surface/dx^2 in 3D. Never fewer than 1. */
+    /** number of points on shell k (mid radius r_eff): derived from the shell
+     *  "capacity" over the spacing -- perimeter/dx in 2D, sphere surface/dx^2
+     *  in 3D -- and any concrete-generator symmetry rule. Never fewer than 1. */
     [[nodiscard]] virtual int pointsOnShell(const int k,const double r_eff,const double dx) const =0;
 
     /** measure of shell k: the centre disk/ball area/volume for k==0, else the
