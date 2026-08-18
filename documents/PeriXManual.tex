@@ -150,7 +150,7 @@
   \large Peridynamic Differential Operator (PDDO) Framework for Multiphysics Simulation
 }
 \author{Yang Bai\\\small Materials Mechanics Lab (MMLab) \\ \small \texttt{yangbai90@outlook.com}}
-\date{Release tag: 2026-04-16, version 0.10}
+\date{Release tag: 2026-08-18, version 0.1.2}
 
 \pagestyle{fancy}
 \fancyhf{}
@@ -274,7 +274,6 @@ complete public vocabulary -- there are no hidden options.
 \textbf{Directory} & \textbf{Contents} \\
 \midrule
 \code{src/}, \code{include/} & C++ sources and headers, one directory per subsystem (\code{Mesh}, \code{PDMesh}, \code{ElmtSystem}, \code{BCSystem}, \code{ICSystem}, \code{EquationSystem}, \code{LinearSolver}, \code{NonlinearSolver}, \code{TimeStepping}, \code{OutputSystem}, \code{InputSystem}, \code{PDProblem}, \code{Utils}) \\
-\code{external/} & vendored header-only dependencies: Eigen and nlohmann/json (no downloads at configure time) \\
 \code{examples/} & eleven ready-to-run JSON decks plus Gmsh meshes (Section~\ref{sec:examples}) \\
 \code{tests/}    & unit and integration tests registered with CTest \\
 \code{documents/}& this manual \\
@@ -291,8 +290,8 @@ complete public vocabulary -- there are no hidden options.
 \begin{itemize}[nosep]
   \item CMake $\geq$ 3.21;
   \item a C++20 compiler (GCC, Clang or MSVC);
-  \item nothing else for the base build -- Eigen and nlohmann/json
-        are vendored in \code{external/}.
+  \item Eigen $\geq$ 5.0.1 and nlohmann/json $\geq$ 3.12.0, installed where
+        CMake can find their package configuration files.
 \end{itemize}
 
 Optional features and their extra requirements:
@@ -385,7 +384,7 @@ The command line accepts exactly two options:
 
 Any parse or validation error prints a descriptive message and the
 process exits with a non-zero status. On startup \PeriX{} prints a
-banner with the version (0.10) and release date (2026-04-16).
+banner with the version (0.1.2) and release date (2026-08-18).
 
 \subsection{Files written by a run}
 

@@ -91,8 +91,8 @@ PeriX is currently oriented to Linux and other Unix-like build environments.
 |---|---|---|
 | CMake 3.21 or newer | Always | System package or CMake distribution |
 | C++20 compiler | Always | GCC or Clang with C++20 support |
-| Eigen | Always | Vendored snapshot in `external/eigen` |
-| nlohmann/json 3.12.0 | Always | Vendored headers in `external/nlohmann` |
+| Eigen 5.0.1 or newer | Always | System installation; found by CMake |
+| nlohmann/json 3.12.0 or newer | Always | System installation; found by CMake |
 | OpenMP | Default CPU assembly; AMGCL | Compiler runtime; found by CMake |
 | Intel oneAPI MKL | Optional PARDISO solver | `USE_ONEAPI=ON`; set `ONEAPI_DIR` or `MKLROOT` |
 | AMGCL | Optional CPU iterative solver | Header-only source/install tree; `USE_AMGCL=ON` and `AMGCL_DIR` |
@@ -425,5 +425,5 @@ This project is supported by:
   
 ## License
 
-PeriX is licensed under GNU GPLv3; see `LICENSE`. Vendored and optional
-third-party dependencies retain their own licenses.
+PeriX is licensed under GNU GPLv3; see `LICENSE`. Third-party dependencies
+retain their own licenses.
