@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(PeriX VERSION 0.1.2 LANGUAGES CXX)
+project(PeriX VERSION 0.10 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
@@ -12,9 +12,6 @@ include(PeriXSolvers)
 
 option(PARALLEL_ASSEMBLE "Build the manuscript OpenMP assembly backend" ON)
 
-find_package(Eigen3 5.0.1 CONFIG REQUIRED)
-find_package(nlohmann_json 3.12.0 CONFIG REQUIRED)
-
 add_library(perix_core STATIC ${PERIX_CORE_SOURCES})
 add_library(PeriX::core ALIAS perix_core)
 
@@ -25,11 +22,8 @@ set_target_properties(perix_core PROPERTIES
 
 target_include_directories(perix_core PUBLIC
     "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
-)
-
-target_link_libraries(perix_core PUBLIC
-    Eigen3::Eigen
-    nlohmann_json::nlohmann_json
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external>"
+    "$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/external/eigen>"
 )
 
 if(PARALLEL_ASSEMBLE)

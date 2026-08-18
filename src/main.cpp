@@ -18,7 +18,7 @@
 #include "Utils/ProjectBanner.h"
 #include "PDProblem/PDProblem.h"
 int main(int args,char *argv[]) {
-    ProjectBanner::print("0.1.2");
+    ProjectBanner::print("0.1");
 
     PDProblem problem;
     problem.run(args,argv);
